@@ -118,18 +118,9 @@ class getContributionController extends ajaxController {
          *
          */
         if ( !$this->concordance_search ) {
-            //
-            $segmentsList = ( new Segments_SegmentDao )->setCacheTTL( 60 * 60 * 24 )->getContextAndSegmentByIDs(
-                    [
-                            'id_before'  => $this->id_before,
-                            'id_segment' => $this->id_segment,
-                            'id_after'   => $this->id_after
-                    ]
-            );
 
-            $this->context_before = $segmentsList->id_before->segment;
-            $this->text           = $segmentsList->id_segment->segment;
-            $this->context_after  = $segmentsList->id_after->segment;
+            //
+            $this->_getContexts();
 
             $this->source         = $this->jobData[ 'source' ];
             $this->target         = $this->jobData[ 'target' ];
@@ -207,6 +198,7 @@ class getContributionController extends ajaxController {
              * @var $tms Engines_MyMemory
              */
             $tms = Engine::getInstance( $_TMS );
+            $tms->setFeatureSet( $this->featureSet );
 
             $config = array_merge( $tms->getConfigStruct(), $config );
             $config[ 'segment' ]       = $this->text;
@@ -252,29 +244,31 @@ class getContributionController extends ajaxController {
 
         if ( $this->id_mt_engine > 1 /* Request MT Directly */ && !$this->concordance_search ) {
 
-            /**
-             * @var $mt_engine Engines_MMT
-             */
-            $mt_engine        = Engine::getInstance( $this->id_mt_engine );
-            $config = $mt_engine->getConfigStruct();
+            if( empty( $tms_match ) || (int)str_replace( "%", "", $tms_match[ 0 ][ 'match' ] ) < 100 ) {
+                /**
+                 * @var $mt_engine Engines_MMT
+                 */
+                $mt_engine = Engine::getInstance( $this->id_mt_engine );
+                $config    = $mt_engine->getConfigStruct();
 
-            //if a callback is not set only the first argument is returned, get the config params from the callback
-            $config = $this->featureSet->filter( 'beforeGetContribution', $config, $mt_engine, $this->jobData );
+                //if a callback is not set only the first argument is returned, get the config params from the callback
+                $config = $this->featureSet->filter( 'beforeGetContribution', $config, $mt_engine, $this->jobData );
 
-            $config[ 'segment' ] = $this->text;
-            $config[ 'source' ]  = $this->source;
-            $config[ 'target' ]  = $this->target;
-            $config[ 'email' ]   = INIT::$MYMEMORY_API_KEY;
-            $config[ 'segid' ]   = $this->id_segment;
+                $config[ 'segment' ] = $this->text;
+                $config[ 'source' ]  = $this->source;
+                $config[ 'target' ]  = $this->target;
+                $config[ 'email' ]   = INIT::$MYMEMORY_API_KEY;
+                $config[ 'segid' ]   = $this->id_segment;
 
-            $mt_result = $mt_engine->get( $config );
+                $mt_result = $mt_engine->get( $config );
 
-            if ( isset( $mt_result['error']['code'] ) ) {
-                $mt_result['error']['created_by_type'] = 'MT';
-                $this->result[ 'errors' ][] = $mt_result['error'];
-                $mt_result = false;
+                if ( isset( $mt_result[ 'error' ][ 'code' ] ) ) {
+                    $mt_result[ 'error' ][ 'created_by_type' ] = 'MT';
+                    $this->result[ 'errors' ][]                = $mt_result[ 'error' ];
+                    $mt_result                                 = false;
+                }
             }
-
+            
         }
         $matches = array();
 
@@ -396,6 +390,25 @@ class getContributionController extends ajaxController {
         }
 
         $this->result[ 'data' ][ 'matches' ] = $matches;
+    }
+
+    protected function _getContexts(){
+
+        //Get contexts
+        $segmentsList = ( new Segments_SegmentDao )->setCacheTTL( 60 * 60 * 24 )->getContextAndSegmentByIDs(
+                [
+                        'id_before'  => $this->id_before,
+                        'id_segment' => $this->id_segment,
+                        'id_after'   => $this->id_after
+                ]
+        );
+
+        $this->featureSet->filter( 'rewriteContributionContexts', $segmentsList, $this->__postInput );
+
+        $this->context_before = $segmentsList->id_before->segment;
+        $this->text           = $segmentsList->id_segment->segment;
+        $this->context_after  = $segmentsList->id_after->segment;
+
     }
 
     protected function _matchRewrite( $match ){
