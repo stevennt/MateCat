@@ -20,7 +20,7 @@ window.QualityReportVersions = require('./components/review_improved/QualityRepo
 window.Review_QualityReportButton = require('./components/review/QualityReportButton').default ;
 
 window.SubHeaderContainer = require('./components/header/cattol/SubHeaderContainer').default ;
-window.FileNavigationMenu = require('./components/header/cattol/FileNavigationMenu').default;
+window.FileNavigationMenu = require('./components/header/FileNavigationMenu').default;
 window.SegmentFilter = require('./components/header/cattol/segment_filter/SegmentsFilter').default;
 window.NotificationBox = require('./components/notificationsComponent/NotificationBox').default;
 

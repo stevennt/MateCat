@@ -103,7 +103,7 @@ class Editarea extends React.Component {
 
 		//check if the translation is changed
 		const   value = htmlEncode(UI.prepareTextToSend($(this.editAreaRef).html())),
-                status = (value !== this.props.segment.translation);
+                status = (value !== htmlEncode(UI.prepareTextToSend(this.props.translation)));
 		if(this.props.segment.modified != status){
             SegmentActions.modifiedTranslation(this.props.segment.sid,this.props.segment.fid,status);
         }
