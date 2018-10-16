@@ -101,8 +101,8 @@ $.extend(UI, {
 			return $.Deferred().resolve();
 		}
 
-        var id = current.attr('id');
-        var id_segment = id.split('-')[1];
+        var id = UI.getSegmentId(current);
+        var id_segment_original = id.split('-')[0];
 
         if( config.brPlaceholdEnabled ) {
             txt = this.postProcessEditarea(current, '.source');
@@ -129,17 +129,17 @@ $.extend(UI, {
                 return $.Deferred().resolve();
             }
 
-            var contextBefore = UI.getContextBefore(id_segment);
-            var idBefore = UI.getIdBefore(id_segment);
-            var contextAfter = UI.getContextAfter(id_segment);
-            var idAfter = UI.getIdAfter(id_segment);
+            var contextBefore = UI.getContextBefore(id);
+            var idBefore = UI.getIdBefore(id);
+            var contextAfter = UI.getContextAfter(id);
+            var idAfter = UI.getIdAfter(id);
 
 		return APP.doRequest({
 			data: {
 				action: 'getContribution',
 				password: config.password,
 				is_concordance: 0,
-				id_segment: id_segment,
+				id_segment: id_segment_original,
 				text: txt,
 				id_job: config.id_job,
 				num_results: this.numContributionMatchesResults,
@@ -149,7 +149,7 @@ $.extend(UI, {
                 context_after: contextAfter,
                 id_after: idAfter,
 			},
-			context: $('#' + id),
+			context: $('#segment-' + id),
 			error: function() {
 				UI.failedConnection(0, 'getContribution');
 			},
