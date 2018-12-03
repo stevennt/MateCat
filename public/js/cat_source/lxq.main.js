@@ -147,6 +147,7 @@ LXQ.init  = function () {
             urls: '#b8a300',
             spelling: '#563d7c',
             specialchardetect: '#38C0C5',
+            mspolicheck: '#38C0C5',
             multiple: '#EA92B8',
             glossary: '#EA92B8',
             blacklist: '#EA92B8'
@@ -419,6 +420,9 @@ LXQ.init  = function () {
                 }, {
                     //color: '#38C0C5',
                     ranges: results.specialchardetect
+                }, {
+                    //color: '#38C0C5',
+                    ranges: results.mspolicheck
                 }, {
                     //color: '#b8a300',
                     ranges: results.urls
@@ -737,16 +741,21 @@ LXQ.init  = function () {
                    var txt = getWarningForModule(cl,false);
                    if (cl === 'g3g' && LXQ.lexiqaData.lexiqaWarnings[UI.getSegmentId(segment)]) {
                        //need to modify message with word.
-                       var ind = Math.floor(j / 2); //we aredding the x0 classes after each class..
-                       var word = LXQ.lexiqaData.lexiqaWarnings[UI.getSegmentId(segment)][errorlist[ind]].msg;
+                       ind = Math.floor(j / 2); //we aredding the x0 classes after each class..
+                       word = LXQ.lexiqaData.lexiqaWarnings[UI.getSegmentId(segment)][errorlist[ind]].msg;
                        txt = txt.replace('#xxx#',word);
                    }
-
+                   if (cl === 'o1' && LXQ.lexiqaData.lexiqaWarnings[UI.getSegmentId(segment)]) {
+                        //need to modify message with word.
+                        ind = Math.floor(j / 2); //we aredding the x0 classes after each class..
+                        word = LXQ.lexiqaData.lexiqaWarnings[UI.getSegmentId(segment)][errorlist[ind]].tootipExtraText;
+                        txt = txt.replace('XXXX',word);
+                    }
                    if (txt!==null && LXQ.lexiqaData.lexiqaWarnings[UI.getSegmentId(segment)]) {
-                        var ind = Math.floor(j / 2); //we aredding the x0 classes after each class..
+                        ind = Math.floor(j / 2); //we aredding the x0 classes after each class..
                         var warningData = LXQ.lexiqaData.lexiqaWarnings[UI.getSegmentId(segment)][errorlist[ind]];
                         if (!warningData) return;
-                        var word = warningData.text;
+                        word = warningData.text;
                         count++;
                         var row = $(tpls.lxqTooltipBody);
                         row.find('.tooltip-error-category').text(txt);
@@ -767,8 +776,13 @@ LXQ.init  = function () {
                         if (warningData.suggestions && warningData.suggestions.length && word && word.length) {
                           $.each(warningData.suggestions, function (i, suggest) {
                               var suggestRow = $(tpls.lxqTooltipSuggestionBody);
-                              suggestRow.find('.tooltip-error-category').text(suggest).css('cursor','pointer');;
-                              suggestRow.data('word',word);
+                              if (cl ==='o1') {
+                                suggestRow.find('.tooltip-error-category').text(suggest);
+                              }
+                              else {
+                                suggestRow.find('.tooltip-error-category').text(suggest).css('cursor','pointer');
+                                suggestRow.data('word',word);
+                              }
                               root.append(suggestRow);
                           });
                         }
@@ -776,11 +790,11 @@ LXQ.init  = function () {
                    }
                });
                if (spellingRow!==null && count == 1 ) //do not show on multiple errors...
-                    root.append(spellingRow)
+                    root.append(spellingRow);
                $(element).data('powertipjq', root);
                }
             });
-        }
+        };
         var reloadPowertip = function(segment) {
             if (segment!==undefined && segment!==null && LXQ.lexiqaData.segments.indexOf(UI.getSegmentId(segment)) > -1) {
                 buildPowertipDataForSegment(segment);
@@ -803,17 +817,19 @@ LXQ.init  = function () {
                     if ($('#powerTip').find('.lxq-suggestion').length) {
                       $.each($('#powerTip').find('.lxq-suggestion'), function (i, suggestRow) {
                         var word = $(suggestRow).data('word');
-                        var suggestion  = $(suggestRow).text().trim();
-                        $(suggestRow).find('.tooltip-error-category').on('click', function (e) {
-                            e.preventDefault();
-                            LXQ.replaceWord(word, suggestion,that);
-                        });
+                        if (word !== undefined) {
+                            var suggestion  = $(suggestRow).text().trim();
+                            $(suggestRow).find('.tooltip-error-category').on('click', function (e) {
+                                e.preventDefault();
+                                LXQ.replaceWord(word, suggestion,that);
+                            });
+                        }
                       });
                     }
                     if ($(this).hasClass('d1g')) {
                     // make an ajax request
                         var word = $('#powerTip').find('.spelling').data('word');
-                        var that = this;
+                        that = this;
                         $.ajax({
                             url: config.lexiqaServer+'/getSuggestions',
                             data: {
@@ -861,11 +877,13 @@ LXQ.init  = function () {
                     if ($('#powerTip').find('.lxq-suggestion').length) {
                       $.each($('#powerTip').find('.lxq-suggestion'), function (i, suggestRow) {
                         var word = $(suggestRow).data('word');
-                        var suggestion  = $(suggestRow).text().trim();
-                        $(suggestRow).find('.tooltip-error-category').on('click', function (e) {
-                            e.preventDefault();
-                            LXQ.replaceWord(word, suggestion,that);
-                        });
+                        if (word !== undefined) {
+                            var suggestion  = $(suggestRow).text().trim();
+                            $(suggestRow).find('.tooltip-error-category').on('click', function (e) {
+                                e.preventDefault();
+                                LXQ.replaceWord(word, suggestion,that);
+                            });
+                        }
                       });
                     }
                     if ($(this).hasClass('d1g')) {
@@ -897,7 +915,7 @@ LXQ.init  = function () {
                     }
                 });
             }
-        }
+        };
 
         var replaceWord  = function(word, suggest,target) {
             if ($(target).closest(UI.targetContainerSelector()).attr('contenteditable')) {
@@ -953,7 +971,7 @@ LXQ.init  = function () {
                 LXQ.lxqRemoveSegmentFromWarningList(targetSeg);
             }
             postIgnoreError(errorid);
-        }
+        };
 
         var redoHighlighting = function(segmentId,insource) {
             var segment = UI.getSegmentById(segmentId);
@@ -965,6 +983,7 @@ LXQ.init  = function () {
                         urls: [],
                         spelling: [],
                         specialchardetect: [],
+                        mspolicheck: [],
                         glossary: [],
                         blacklist: []
                     },
@@ -975,6 +994,7 @@ LXQ.init  = function () {
                         urls: [],
                         spelling: [],
                         specialchardetect: [],
+                        mspolicheck: [],
                         glossary: [],
                         blacklist: []
                     }
@@ -1023,7 +1043,7 @@ LXQ.init  = function () {
                     // console.log('postShowHighlight success: '+result);
                 }
             });
-        }
+        };
 
         var postIgnoreError = function(errorid) {
             $.ajax({
@@ -1038,7 +1058,7 @@ LXQ.init  = function () {
                     // console.log('postIgnoreError success: '+result);
                 }
             });
-        }
+        };
 
 
         var shouldHighlighWarningsForSegment = function (segId,value) {
@@ -1056,7 +1076,7 @@ LXQ.init  = function () {
             else{
                 return false;
             }
-        }
+        };
         var getVisibleWarningsCountForSegment = function(segment) {
             var segId ;
             if (typeof segment ==='string') {
@@ -1073,7 +1093,7 @@ LXQ.init  = function () {
                     count++;
             });
             return count;
-        }
+        };
         var getIgnoredWarningsCountForSegment =  function(segment) {
             var segId ;
             if (typeof segment ==='string') {
@@ -1090,14 +1110,14 @@ LXQ.init  = function () {
                     count++;
             });
             return count;
-        }
+        };
         var getWarningForModule = function (module,insource) {
             if (warningMesasges.hasOwnProperty(module))
                 return (insource ? warningMesasges[module].s:warningMesasges[module].t);
             else
                 return null;
 
-        }
+        };
         var notCheckedSegments; //store the unchecked segments at startup
         var doQAallSegments = function () {
             var segments = $('#outer').find('section');
@@ -1111,7 +1131,7 @@ LXQ.init  = function () {
             });
             notCheckedSegments = notChecked;
             checkNextUncheckedSegment();
-        }
+        };
 
         var checkNextUncheckedSegment = function (previousSegment) {
             if (previousSegment!==undefined && previousSegment!== null )
@@ -1129,7 +1149,7 @@ LXQ.init  = function () {
             else {
                 checkNextUncheckedSegment();
             }
-        }
+        };
         var getFristSegmentWithWarning = function () {
              if (LXQ.lexiqaData.hasOwnProperty('segments') && LXQ.lexiqaData.segments.length > 0) {
                 return LXQ.lexiqaData.segments[0];
@@ -1137,7 +1157,7 @@ LXQ.init  = function () {
             else {
                 return UI.currentSegmentId;
             }
-        }
+        };
 
         var getNextSegmentWithWarning = function () {
             //if there are no errors..
@@ -1162,7 +1182,7 @@ LXQ.init  = function () {
                 ind = 0;
             return LXQ.lexiqaData.segments[ind];
 
-        }
+        };
         var getPreviousSegmentWithWarning = function () {
             //if there are no errors..
             if (!LXQ.lexiqaData.hasOwnProperty('segments') || LXQ.lexiqaData.segments.length == 0)
@@ -1200,8 +1220,7 @@ LXQ.init  = function () {
                             if (key[key.length-1] === 'g')
                                 modulesNoHighlight.push(key);
                         });
-                    }
-                    ,error:function(result){
+                    },error:function(result){
                         // console.err(result);
                     }
             });
@@ -1323,7 +1342,7 @@ LXQ.init  = function () {
                             }
 
                             //highlight the segments
-                            var source_val = $( ".source", segment ).html();
+                            source_val = $( ".source", segment ).html();
                             var highlights = {
                                 source: {
                                     numbers: [],
@@ -1332,6 +1351,7 @@ LXQ.init  = function () {
                                     urls: [],
                                     spelling: [],
                                     specialchardetect: [],
+                                    mspolicheck: [],
                                     glossary: [],
                                     blacklist: []
                                 },
@@ -1342,6 +1362,7 @@ LXQ.init  = function () {
                                     urls: [],
                                     spelling: [],
                                     specialchardetect: [],
+                                    mspolicheck: [],
                                     glossary: [],
                                     blacklist: []
                                 }
@@ -1372,14 +1393,14 @@ LXQ.init  = function () {
                             source_val = LXQ.highLightText( source_val, highlights.source, isSegmentCompleted, true, true, segment );
                             if ( callback != null && UI.currentSegmentId == id_segment )
                                 saveSelection();
-                            var target_val = $( UI.targetContainerSelector(), segment ).html();
+                            target_val = $( UI.targetContainerSelector(), segment ).html();
                             target_val = LXQ.highLightText( target_val, highlights.target, isSegmentCompleted, true, false, segment );
 
                             SegmentActions.replaceEditAreaTextContent(UI.getSegmentId(segment), UI.getSegmentFileId(segment), target_val);
                             if ( callback != null && UI.currentSegmentId == id_segment ) {
                                 restoreSelection();
                             }
-                            SegmentActions.replaceSourceText(UI.getSegmentId(segment), UI.getSegmentFileId(segment), source_val)
+                            SegmentActions.replaceSourceText(UI.getSegmentId(segment), UI.getSegmentFileId(segment), source_val);
                             LXQ.reloadPowertip( segment );
                             //only reload dropdown menu and link, if there was an error...
                             //if ( LXQ.enabled() ) LXQ.refreshElements();
@@ -1400,7 +1421,7 @@ LXQ.init  = function () {
                             SegmentActions.replaceEditAreaTextContent(UI.getSegmentId(segment), UI.getSegmentFileId(segment), target_val);
                             if ( callback != null && UI.currentSegmentId == id_segment )
                                 restoreSelection();
-                            SegmentActions.replaceSourceText(UI.getSegmentId(segment), UI.getSegmentFileId(segment), source_val)
+                            SegmentActions.replaceSourceText(UI.getSegmentId(segment), UI.getSegmentFileId(segment), source_val);
                             if ( callback != null )
                                 callback();
                         }
@@ -1453,6 +1474,7 @@ LXQ.init  = function () {
                                     urls: [],
                                     spelling: [],
                                     specialchardetect: [],
+                                    mspolicheck: [],
                                     glossary: [],
                                     blacklist: []
                                 },
@@ -1463,6 +1485,7 @@ LXQ.init  = function () {
                                     urls: [],
                                     spelling: [],
                                     specialchardetect: [],
+                                    mspolicheck: [],
                                     glossary: [],
                                     blacklist: []
                                 }

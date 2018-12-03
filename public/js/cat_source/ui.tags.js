@@ -197,7 +197,7 @@ $.extend(UI, {
 
     },
     /**
-     * To transform text with the' ph' tags that have the attribute' equival-text' into text only, without html
+     * To transform text with the' ph' tags that have the attribute' equiv-text' into text only, without html
      */
     removePhTagsWithEquivTextIntoText: function ( tx ) {
         try {
@@ -364,7 +364,7 @@ $.extend(UI, {
                         (typeof nearTagOnLeft != 'undefined')&&(nearTagOnLeft)) {
                         UI.highlightCorrespondingTags($(UI.editarea.find('.locked')[indexTags]));
                     }
-                    UI.removeHighlightCorrespondingTags();
+                    UI.removeHighlightCorrespondingTags(UI.editarea);
 
                     UI.numCharsUntilTagRight = null;
                     UI.numCharsUntilTagLeft = null;
@@ -436,8 +436,9 @@ $.extend(UI, {
         }
         $(el).addClass('highlight');
     },
-    removeHighlightCorrespondingTags: function () {
-        $(UI.editarea).find('.locked.highlight').removeClass('highlight');
+    removeHighlightCorrespondingTags: function (segment$) {
+        segment$.find('.locked.highlight').removeClass('highlight');
+        segment$.find('.locked.mismatch').removeClass('mismatch');
     },
 
     // TAG MISMATCH
@@ -731,7 +732,7 @@ $.extend(UI, {
         var div =  document.createElement('div');
         var $div = $(div);
         $div.html(text);
-        div = this.transformPlaceholdersHtml($div);
+        $div = this.transformPlaceholdersHtml($div);
         $div.find('span.space-marker').replaceWith(' ');
         $div = this.encodeTagsWithHtmlAttribute($div);
         return $div.text();
@@ -782,17 +783,13 @@ $.extend(UI, {
     handleDragEvent: function ( e ) {
         var elem = $(e.target);
         if ( elem.hasClass('inside-attribute') || elem.parent().hasClass('inside-attribute') ) {
-            //Temporarily disable the D&D of the tags because on the new chrome version there are problems
-            e.preventDefault();
-            var tag = elem.parent('span.locked:not(.inside-attribute)');
+            var tag = elem.closest('span.locked:not(.inside-attribute)');
             var cloneTag = tag.clone();
             cloneTag.find('.inside-attribute').remove();
             var text = htmlEncode(cloneTag.text());
             e.dataTransfer.setData('text/plain', UI.transformTextForLockTags(text).trim());
             e.dataTransfer.setData('text/html', UI.transformTextForLockTags(text).trim());
         } else if (elem.hasClass('locked')) {
-            //Temporarily disable the D&D of the tags because on the new chrome version there are problems
-            e.preventDefault();
             var text = htmlEncode(elem.text());
             e.dataTransfer.setData('text/plain', UI.transformTextForLockTags(text).trim());
             e.dataTransfer.setData('text/html', UI.transformTextForLockTags(text).trim());
