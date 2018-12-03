@@ -50,7 +50,7 @@ if ( Review.enabled() )
         /**
          * TODO: ###REMOVE###
          */
-        /*$.extend(Review, {
+        $.extend(Review, {
 
             evalOpenableSegment : function(section) {
                 if ( isTranslated(section) ) return true ;
@@ -62,7 +62,7 @@ if ( Review.enabled() )
                 }
                 return false ;
             },
-        });*/
+        });
 
         $.extend(UI, {
 
