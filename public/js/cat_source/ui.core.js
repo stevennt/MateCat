@@ -1031,7 +1031,7 @@ UI = {
                 this.SegmentsContainers[fid] = ReactDOM.render(React.createElement(SegmentsContainer, {
                     fid: fid,
                     isReviewImproved: ReviewImproved.enabled() && Review.enabled(),
-                    isReviewExtended: ReviewExtended.enabled() && Review.enabled(),
+                    isReviewExtended: ReviewExtended.enabled(),
                     isReview: Review.enabled(),
                     reviewType: Review.type,
                     enableTagProjection: UI.enableTagProjection,
