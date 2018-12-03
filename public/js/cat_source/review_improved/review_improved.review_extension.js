@@ -52,7 +52,7 @@ if ( ReviewImproved.enabled() && config.isReview ) {
                 translatedList.first().find(UI.targetContainerSelector()).click();
                 return false;
                 }
-            }
+            };
 
             // find in next segments in the current file
             if ( el.nextAll('section.status-translated, section.status-approved').length ) {
@@ -170,11 +170,6 @@ if ( ReviewImproved.enabled() && config.isReview ) {
             $('body').on('keydown.shortcuts', null, UI.shortcuts.cattol.events.reject.keystrokes.mac, rejectKeyDownEvent ) ;
         },
 
-        renderAfterConfirm: function (nextId) {
-            this.render({
-                segmentToOpen: nextId
-            });
-        },
         unlockIceSegment: function (elem) {
             elem.removeClass('locked').removeClass('icon-lock').addClass('unlocked').addClass('icon-unlocked3');
             var section = elem.closest('section');
@@ -186,10 +181,6 @@ if ( ReviewImproved.enabled() && config.isReview ) {
             var section = elem.closest('section');
             section.addClass('ice-locked').addClass('readonly').removeClass('ice-unlocked');
             UI.closeSegment(section, 1);
-        },
-
-        registerReviseTab: function () {
-            return false;
         },
 
         submitIssues: function (sid, data) {
