@@ -62,6 +62,12 @@ class SegmentTranslationChangeVector {
         return $this->old_translation ;
     }
 
+    public function getWarningChange() {
+        $old_warning = (int) $this->old_translation->warning ;
+        $new_warning = (int) $this->translation->warning ;
+        return $new_warning - $old_warning ;
+    }
+
     /**
      * @return bool
      */

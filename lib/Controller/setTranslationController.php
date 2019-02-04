@@ -585,7 +585,8 @@ class setTranslationController extends ajaxController {
                     'chunk'            => $this->chunk,
                     'segment'          => $this->segment,
                     'user'             => $this->user,
-                    'source_page_code' => $this->_getSourcePageCode()
+                    'source_page_code' => $this->_getSourcePageCode(),
+                    'stats'            => $job_stats
             ] );
 
         } catch ( Exception $e ){
