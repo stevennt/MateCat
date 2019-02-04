@@ -105,6 +105,9 @@ class ChunkReviewModel {
         ChunkReviewDao::updateStruct( $this->chunk_review, array(
                         'fields' => array('reviewed_words_count', 'is_pass', 'penalty_points'))
         );
+
+        $this->chunk_review->getChunk()->getProject()->getFeatures()->run('passFailResultUpdated', $this->chunk_review, $score_per_mille );
+
     }
 
     /**

@@ -119,6 +119,19 @@ class AMQHandler extends Stomp {
 
     }
 
+    public function sendTopic( $destination, $msg, $properties = array(), $sync = null ){
+
+        if( !empty( $this->clientType ) && $this->clientType != self::CLIENT_TYPE_PUBLISHER ){
+            throw new Exception( "This client is a $this->clientType. A client can be only publisher or subscriber, not both." );
+        } elseif( empty( $this->clientType ) ){
+            $this->connect();
+        }
+
+        $this->clientType = self::CLIENT_TYPE_PUBLISHER;
+        return parent::send( '/topic/' . (int)INIT::$INSTANCE_ID . "_" . $destination, $msg, $properties, $sync );
+
+    }
+
     /**
      * Get the queue Length
      *
