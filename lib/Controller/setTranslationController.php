@@ -369,7 +369,7 @@ class setTranslationController extends ajaxController {
          * - evaluate $_jobTotalPEE - $_seg_oldPEE + $_seg_newPEE and save it into the job's row
          */
 
-        $this->updateJobPEE( $old_translation->toArray(), $new_translation->toArray() );
+        $newTotalPEE = $this->updateJobPEE( $old_translation, $new_translation );
 
         $editLogModel                      = new EditLog_EditLogModel( $this->id_job, $this->password, $this->featureSet );
         $this->result[ 'pee_error_level' ] = $editLogModel->getMaxIssueLevel();
@@ -586,7 +586,8 @@ class setTranslationController extends ajaxController {
                     'segment'          => $this->segment,
                     'user'             => $this->user,
                     'source_page_code' => $this->_getSourcePageCode(),
-                    'stats'            => $job_stats
+                    'stats'            => $job_stats,
+                    'pee'              => $newTotalPEE
             ] );
 
         } catch ( Exception $e ){
@@ -717,29 +718,31 @@ class setTranslationController extends ajaxController {
     }
 
     //TODO: put this method into Job model and use Segnent object
-    private function updateJobPEE( Array $old_translation, Array $new_translation ) {
+    private function updateJobPEE( Translations_SegmentTranslationStruct $old_translation, Translations_SegmentTranslationStruct $new_translation ) {
 
         $segmentRawWordCount = $this->segment->raw_word_count;
         $segment             = new EditLog_EditLogSegmentClientStruct(
                 array(
-                        'suggestion'     => $old_translation[ 'suggestion' ],
-                        'translation'    => $old_translation[ 'translation' ],
+                        'suggestion'     => $old_translation->suggestion,
+                        'translation'    => $old_translation->translation,
                         'raw_word_count' => $segmentRawWordCount,
-                        'time_to_edit'   => $old_translation[ 'time_to_edit' ] + $new_translation[ 'time_to_edit' ]
+                        'time_to_edit'   => $old_translation->time_to_edit + $new_translation->time_to_edit
                 )
         );
 
         $oldSegment               = clone $segment;
-        $oldSegment->time_to_edit = $old_translation[ 'time_to_edit' ];
+        $oldSegment->time_to_edit = $old_translation->time_to_edit;
 
         $oldPEE          = $segment->getPEE();
         $oldPee_weighted = $oldPEE * $segmentRawWordCount;
 
-        $segment->translation    = $new_translation[ 'translation' ];
+        $segment->translation    = $new_translation->translation;
         $segment->pe_effort_perc = null;
 
         $newPEE          = $segment->getPEE();
         $newPee_weighted = $newPEE * $segmentRawWordCount;
+
+        $newTotalJobPee = false ;
 
         if ( $segment->isValidForEditLog() ) {
             //if the segment was not valid for editlog and now it is, then just add the weighted pee
@@ -748,25 +751,13 @@ class setTranslationController extends ajaxController {
             } //otherwise, evaluate it normally
             else {
                 $newTotalJobPee = ( $this->jobData[ 'avg_post_editing_effort' ] - $oldPee_weighted + $newPee_weighted );
-
             }
-            $queryUpdateJob = "update jobs
-                                set avg_post_editing_effort = %f
-                                where id = %d and password = '%s'";
-
-            $db = Database::obtain();
-            $db->query(
-                    sprintf(
-                            $queryUpdateJob,
-                            $newTotalJobPee,
-                            $this->id_job,
-                            $this->password
-                    )
-            );
         } //segment was valid but now it is no more
-        else if ( $oldSegment->isValidForEditLog() ) {
+        elseif ( $oldSegment->isValidForEditLog() ) {
             $newTotalJobPee = ( $this->jobData[ 'avg_post_editing_effort' ] - $oldPee_weighted );
+        }
 
+        if ( $newTotalJobPee ) {
             $queryUpdateJob = "update jobs
                                 set avg_post_editing_effort = %f
                                 where id = %d and password = '%s'";
@@ -781,6 +772,8 @@ class setTranslationController extends ajaxController {
                     )
             );
         }
+
+        return $newTotalJobPee ;
     }
 
     private function initVersionHandler() {
