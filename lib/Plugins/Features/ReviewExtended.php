@@ -6,7 +6,6 @@ namespace Features ;
 use API\V2\Json\ProjectUrls;
 use Features\ReviewExtended\ChunkReviewModel;
 use Features\ReviewExtended\Model\ChunkReviewDao;
-use Features\ReviewExtended\Observer\SegmentTranslationObserver;
 use Features\ReviewExtended\SegmentTranslationModel;
 use Features\ReviewExtended\View\API\JSON\ProjectUrlsDecorator;
 use LQA\ChunkReviewStruct;
