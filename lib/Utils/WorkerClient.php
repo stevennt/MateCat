@@ -36,7 +36,7 @@ class WorkerClient {
             }
         }
         else {
-            throw new Exception('Missing task runner config'); 
+            throw new Exception('Missing task runner config');
         }
     }
 

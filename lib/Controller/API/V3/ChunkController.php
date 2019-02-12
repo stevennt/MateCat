@@ -36,14 +36,16 @@ class ChunkController extends KleinController {
      * @throws \Exceptions\NotFoundException
      */
     public function show() {
-
         $format = new Chunk();
 
         $format->setUser( $this->user );
         $format->setCalledFromApi( true );
 
-        $this->response->json( $format->renderOne($this->chunk) );
+        $rendered = $format->renderOne($this->chunk);
 
+        $this->chunk->getProject()->getFeatures()->run('kleinControllerBeforeResponse', $rendered, $this ) ;
+
+        $this->response->json( $rendered );
     }
 
     protected function afterConstruct() {
@@ -52,7 +54,9 @@ class ChunkController extends KleinController {
         $Validator->onSuccess( function () use ( $Validator, $Controller ) {
             $Controller->setChunk( $Validator->getChunk() );
         } );
+        $this->chunk = $Validator->getChunk();
         $this->appendValidator( $Validator );
+
     }
 
 }
