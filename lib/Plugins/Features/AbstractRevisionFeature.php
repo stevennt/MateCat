@@ -5,7 +5,7 @@ namespace Features ;
 use API\V2\Exceptions\ValidationError;
 use Chunks_ChunkCompletionEventStruct;
 use Chunks_ChunkDao;
-use Contribution\ContributionStruct;
+use Contribution\ContributionSetStruct;
 use Database;
 use Exception;
 use Features\ReviewImproved\ChunkReviewModel;
@@ -41,12 +41,12 @@ abstract class AbstractRevisionFeature extends BaseFeature {
      *
      * XXX: not sure this was the best way to solve this problem.
      *
-     * @param ContributionStruct     $contributionStruct
+     * @param ContributionSetStruct  $contributionStruct
      * @param Projects_ProjectStruct $project
      *
-     * @return ContributionStruct
+     * @return ContributionSetStruct
      */
-    public function filterContributionStructOnSetTranslation( ContributionStruct $contributionStruct, Projects_ProjectStruct $project ) {
+    public function filterContributionStructOnSetTranslation( ContributionSetStruct $contributionStruct, Projects_ProjectStruct $project ) {
 
         if ( $contributionStruct->fromRevision ) {
             $contributionStruct->propagationRequest = true ;
@@ -73,7 +73,7 @@ abstract class AbstractRevisionFeature extends BaseFeature {
                 $review_password, $id_job );
 
         if ( ! $chunk_review ) {
-            throw new \Exceptions_RecordNotFound('Review record was not found');
+            throw new \Exceptions\NotFoundException('Review record was not found');
         }
 
         return $chunk_review->password ;
@@ -87,7 +87,7 @@ abstract class AbstractRevisionFeature extends BaseFeature {
         $chunk_review = $chunk_reviews[0];
 
         if ( ! $chunk_review ) {
-            throw new \Exceptions_RecordNotFound('Review record was not found');
+            throw new \Exceptions\NotFoundException('Review record was not found');
         }
 
         return $chunk_review->review_password ;
@@ -164,7 +164,7 @@ abstract class AbstractRevisionFeature extends BaseFeature {
      */
     protected function createQaChunkReviewRecord( $id_job, $id_project, $options = [] ) {
 
-        $chunks     = Chunks_ChunkDao::getByIdProjectAndIdJob( $id_project, $id_job );
+        $chunks     = Chunks_ChunkDao::getByIdProjectAndIdJob( $id_project, $id_job, 0 );
 
         foreach ( $chunks as $k => $chunk ) {
             $data = [
@@ -272,11 +272,13 @@ abstract class AbstractRevisionFeature extends BaseFeature {
     public function setTranslationCommitted($params) {
         $new_translation = $params['translation'];
         $old_translation = $params['old_translation'];
+        $propagated_ids = $params['propagated_ids'] ;
 
-        $new_translation_struct =  new Translations_SegmentTranslationStruct( $new_translation );
+        $new_translation_struct = new Translations_SegmentTranslationStruct( $new_translation );
         $old_translation_struct = new Translations_SegmentTranslationStruct( $old_translation );
 
         $translation_model = new SegmentTranslationModel( $new_translation_struct );
+        $translation_model->setPropagatedIds( $propagated_ids );
         $translation_model->setOldTranslation( $old_translation_struct );
 
         $this->attachObserver( $translation_model );

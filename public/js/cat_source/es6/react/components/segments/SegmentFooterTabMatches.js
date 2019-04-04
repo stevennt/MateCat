@@ -12,7 +12,7 @@ class SegmentFooterTabMatches extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            matches: []
+            matches: undefined
         };
         this.suggestionShortcutLabel = 'CTRL+';
         this.processContributions = this.processContributions.bind(this);
@@ -25,7 +25,7 @@ class SegmentFooterTabMatches extends React.Component {
         let self = this;
         let matchesProcessed = [];
         _.each(matches, function (el, index) {
-            if ((el.segment === '') || (el.translation === '')) return false;
+            if ( _.isUndefined(this.segment) || (el.segment === '') || (el.translation === '')) return false;
             let item = {};
             item.id = el.id;
             item.disabled = (el.id == '0') ? true : false;
@@ -117,7 +117,7 @@ class SegmentFooterTabMatches extends React.Component {
         target = view2rawxliff(target);
         source = view2rawxliff(source);
         matches.splice(index, 1);
-        UI.setDeleteSuggestion(source, target);
+        UI.setDeleteSuggestion(source, target, match.id);
         this.setState({
             matches: matches
         });
@@ -133,7 +133,7 @@ class SegmentFooterTabMatches extends React.Component {
             </li>
             <li className="graydesc">
                 Source:
-                <span className="bold"> {match.cb}</span>
+                <span className="bold" style={{fontSize: '14px'}}> {match.cb}</span>
             </li>
         </ul>;
     }
@@ -207,10 +207,21 @@ class SegmentFooterTabMatches extends React.Component {
                             </span>
                             {trashIcon}
                         </li>
-                        {self.getMatchInfo(match)}
+                        {self.getMatchInfo( match )}
                     </ul>;
-                matches.push(item);
-            });
+                matches.push( item );
+            } );
+
+        } else if (this.props.segment.contributions.matches.length && this.props.segment.contributions.matches.length === 0 ){
+            if((config.mt_enabled)&&(!config.id_translator)) {
+                matches.push( <ul key={0} className="graysmall message">
+                    <li>No matches could be found for this segment. Please, contact <a href="mailto:support@matecat.com">support@matecat.com</a> if you think this is an error.</li>
+                </ul>);
+            } else {
+                matches.push( <ul key={0} className="graysmall message">
+                    <li>No match found for this segment</li>
+                </ul>);
+            }
         }
 
         let errors = [];
@@ -256,15 +267,20 @@ class SegmentFooterTabMatches extends React.Component {
 
 
         return (
-            <div
-                key={"container_" + this.props.code}
-                className={"tab sub-editor " + this.props.active_class + " " + this.props.tab_class}
-                id={"segment-" + this.props.id_segment + " " + this.props.tab_class}>
-                <div className="overflow">
-                    {matches}
-                </div>
-                <div className="engine-errors">{errors}</div>
+        <div
+            key={"container_" + this.props.code}
+            className={"tab sub-editor "+ this.props.active_class + " " + this.props.tab_class}
+            id={"segment-" + this.props.id_segment + "-" + this.props.tab_class}>
+            <div className="overflow">
+                { !_.isUndefined(matches) && matches.length > 0 ? (
+                    matches
+                ): (
+                    <span className="loader loader_on"/>
+                )}
+
             </div>
+            <div className="engine-errors">{errors}</div>
+        </div>
         )
     }
 }

@@ -78,8 +78,8 @@ let SearchUtils = {
                 this.whereToFind = ".source";
             }
         }
-		let source = (p.source) ? p.source : '';
-		let target = (p.target) ? p.target : '';
+		let source = (p.source) ? htmlEncode(p.source) : '';
+		let target = (p.target) ? htmlEncode(p.target) : '';
 		let replace = (p.replace) ? p.replace : '';
 
 		this.clearSearchMarkers();
@@ -232,8 +232,8 @@ let SearchUtils = {
         this.searchParams['exact-match'] = params.exactMatch;
 
         let p = this.searchParams;
-        let source = (p.source) ? p.source : '';
-        let target = (p.target) ? p.target : '';
+        let source = (p.source) ? htmlEncode(p.source) : '';
+        let target = (p.target) ? htmlEncode(p.target) : '';
         let replace = (p.replace) ? p.replace : '';
         let dd = new Date();
 
@@ -462,9 +462,10 @@ let SearchUtils = {
      * @param testRegex
      */
 	execSearchResultsMarking: function(areas, regex, testRegex) {
-        let searchMarker = (this.searchMode == 'source&target')? 'searchPreMarker' : 'searchMarker';
+        let searchMarker = (this.searchMode === 'source&target')? 'searchPreMarker' : 'searchMarker';
 		$(areas).each(function() {
 		    let segId = UI.getSegmentId( $(this) );
+		    segId = segId.split('-')[0]; // splitted segments
             if ( SearchUtils.searchResultsSegments.indexOf(segId) > -1 ) {
                 let isCurrent = $(this).find('.currSearchItem').length > 0;
                 let isTagged = $(this).find('.searchMarker').length > 0;
@@ -483,6 +484,10 @@ let SearchUtils = {
                         return spanArray.shift();
                     });
                     $(this).html(tt);
+                    //Temp fix for tags with equiv text
+                    $(this).find('.tag-html-container-open').each(function (  ) {
+                        $(this).text($(this).text());
+                    });
                 }
             }
 		});
@@ -572,46 +577,23 @@ let SearchUtils = {
                 }
 
             }
-        } else if (this.searchMode == 'source&target') {
-            let m = $(".targetarea mark.currSearchItem");
-
-            if ($(m)[jQueryFnForNext]('mark.searchMarker').length) { // there are other subsequent results in the segment
-
-                $(m).removeClass('currSearchItem');
-                $(m)[jQueryFnForNext]('mark.searchMarker').first().addClass('currSearchItem');
-                if (unmark)
-                    $(m).replaceWith($(m).text());
-                UI.goingToNext = false;
-            } else { // jump to results in subsequents segments
-
-                let seg = (m.length) ? $(m).parents('section') : $('mark.searchMarker').first().parents('section');
-                if (seg.length) {
-                    this.gotoSearchResultAfter({
-                        el: $(seg).attr('id').split('-')[1],
-                        unmark: unmark
-                    }, type);
-                } else {
-                    setTimeout(function() {
-                        SearchUtils.gotoNextResultItem(false, type);
-                    }, 500);
-                }
-            }
-
         } else {
-            let m = $("mark.currSearchItem");
-
-            if ($(m)[jQueryFnForNext]('mark.searchMarker').length) { // there are other subsequent results in the segment
-
-                $(m).removeClass('currSearchItem');
-                $(m)[jQueryFnForNext]('mark.searchMarker').first().addClass('currSearchItem');
+            let current = "mark.currSearchItem";
+            let currentSegmentFind = $(current).closest("div");
+            let marksArray = currentSegmentFind.find("mark").toArray();
+            let currentMarkIndex = marksArray.indexOf($(current)[0]);
+            let nextIndex = (type === "prev") ? currentMarkIndex - 1 : currentMarkIndex + 1;
+            if ( $(current) && marksArray.length > 1 && !_.isUndefined( marksArray[nextIndex] ) ) {
                 if (unmark)
-                    $(m).replaceWith($(m).text());
+                    $(current).replaceWith($(current).text());
+                $(current).removeClass('currSearchItem');
+                $(marksArray[nextIndex]).addClass('currSearchItem');
                 UI.goingToNext = false;
             } else { // jump to results in subsequents segments
-                let seg = (m.length) ? $(m).parents('section') : $('mark.searchMarker').first().parents('section');
-                if (seg.length) {
+                let $currentSegment = $(current).length ? $(current).parents('section') : UI.currentSegment;
+                if ($currentSegment.length) {
                     this.gotoSearchResultAfter({
-                        el: $(seg).attr('id').split('-')[1],
+                        el: $($currentSegment).attr('id').split('-')[1],
                         unmark: unmark
                     }, type);
                 } else {
@@ -620,6 +602,7 @@ let SearchUtils = {
                     }, 500);
                 }
             }
+
         }
     },
     /**
@@ -671,8 +654,10 @@ let SearchUtils = {
             let self = this;
             segmentsWithMarkers = (type === "prev" ) ? segmentsWithMarkers.toArray().reverse() : segmentsWithMarkers ;
             $.each(segmentsWithMarkers, function() {
-                if ( (type === "prev" &&  UI.getSegmentId($(this)) < UI.getSegmentId($currentSegment)) ||
-                     (type !== "prev" && UI.getSegmentId($(this)) > UI.getSegmentId($currentSegment) )
+                var indexCurrent = self.searchResultsSegments.indexOf( '' + UI.getSegmentId($currentSegment) );
+                var index = self.searchResultsSegments.indexOf( '' + UI.getSegmentId($(this)) );
+                if ( (type === "prev" &&  ( UI.getSegmentId($(this)) < UI.getSegmentId($currentSegment) || (indexCurrent === 0 &&  index === self.searchResultsSegments.length - 1)) ) ||
+                     (type !== "prev" && (UI.getSegmentId($(this)) > UI.getSegmentId($currentSegment) || (indexCurrent === self.searchResultsSegments.length - 1 &&  index === 0)) )
                     ){
                     found = true;
                     UI.scrollSegment($(this));
@@ -683,7 +668,11 @@ let SearchUtils = {
 
                     let mark = $("mark.currSearchItem");
                     $(mark).removeClass('currSearchItem');
-                    $(this).find('mark.searchMarker').first().addClass('currSearchItem');
+                    if (type === "prev") {
+                        $(this).find('mark.searchMarker').last().addClass('currSearchItem');
+                    } else {
+                        $(this).find('mark.searchMarker').first().addClass('currSearchItem');
+                    }
                     if (unmark) {
                         $(mark).replaceWith($(mark).text());
                     }
@@ -714,9 +703,15 @@ let SearchUtils = {
         className = (className) ? className : '.source'
         _.each(this.searchResultsSegments, function ( item ) {
             let $obj = UI.getSegmentById(item);
-            if ($obj.length) {
+            $obj = ( $obj.length > 0 ) ? $obj : UI.getSegmentsSplit(item);
+            if ($obj.length === 1) {
                 $obj = $obj.find(className);
                 $objects.push($obj);
+            } else if ( $obj.length > 1 ) { //splitted segments
+                _.each($obj, (item)=> {
+                    item = $(item).find(className);
+                    $objects.push(item);
+                });
             }
         });
         return $objects;

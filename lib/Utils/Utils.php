@@ -382,7 +382,7 @@ class Utils {
 
     }
 
-    public static function create_guid( $namespace = '' ) {
+    public static function createToken( $namespace = '' ) {
 
         static $guid = '';
         $uid  = uniqid( "", true );
@@ -417,6 +417,38 @@ class Utils {
         \Log::doLog('created GUID', $guid ); 
 
         return $guid;
+    }
+
+    /**
+     * @param $token
+     *
+     * @return bool
+     */
+    public static function isTokenValid( $token = null ){
+        if( empty( $token ) || !preg_match( '|^\{[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}\}$|', $token ) ){
+            return false;
+        }
+        return true;
+    }
+
+    public static function isValidFileName( $fileUpName ) {
+
+        if (
+                stripos( $fileUpName, '../' ) !== false ||
+                stripos( $fileUpName, '/../' ) !== false ||
+                stripos( $fileUpName, '/..' ) !== false ||
+                stripos( $fileUpName, '%2E%2E%2F' ) !== false ||
+                stripos( $fileUpName, '%2F%2E%2E%2F' ) !== false ||
+                stripos( $fileUpName, '%2F%2E%2E' ) !== false ||
+                stripos( $fileUpName, '.' ) === 0 ||
+                stripos( $fileUpName, '%2E' ) === 0
+        ) {
+            //Directory Traversal!
+            return false;
+        }
+
+        return true;
+
     }
 
     public static function filterLangDetectArray( $arr ) {

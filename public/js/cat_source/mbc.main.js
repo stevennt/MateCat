@@ -12,8 +12,6 @@ if ( MBC.enabled() )
     (function ( $, config, window, MBC, undefined ) {
 
         var originalScrollSegment = UI.scrollSegment;
-        SSE.init();
-
         MBC.const = {
             get commentAction() {
                 return 'comment';
@@ -123,15 +121,6 @@ if ( MBC.enabled() )
                 return {active: active, total: total};
             }
         };
-
-        var source = SSE.getSource( 'comments' );
-
-        source.addEventListener( 'message', function ( e ) {
-            var message = new SSE.Message( JSON.parse( e.data ) );
-            if ( message.isValid() ) {
-                $( document ).trigger( message.eventIdentifier, message );
-            }
-        }, false );
 
         var getUsername = function () {
             if ( customUserName ) return customUserName;
@@ -320,6 +309,7 @@ if ( MBC.enabled() )
             inputForm.addClass( 'mbc-reply-input' );
             root.find( '.mbc-comment-balloon-inner' ).append( inputForm );
             el.find('.segment-side-container').prepend( root.show() );
+            inputForm.find( 'textarea' ).focus();
             addTagging();
         };
 
@@ -380,7 +370,7 @@ if ( MBC.enabled() )
         };
 
         var scrollSegment = function ( section ) {
-            if ($('article.mbc-commenting-opened').length > 0 ) {
+            if ($('article.mbc-commenting-opened').length > 0 && section.length > 0) {
 
                 var scrollAnimation = $( UI.scrollSelector );
                 var segment = section;
@@ -456,7 +446,8 @@ if ( MBC.enabled() )
 
         var renderCommentIconLinks = function () {
             $( 'section' ).each( function ( i, el ) {
-                renderCommentIconLink( el );
+                if ( $(el).find('.mbc-comment-notification').length === 0 && $(el).find('.mbc-comment-balloon-outer').length === 0)
+                    renderCommentIconLink( el );
             } );
         };
 
@@ -833,6 +824,10 @@ if ( MBC.enabled() )
                 } else {
                     openSegmentComment(section);
                 }
+                setTimeout(function (  ) {
+                    $( '.mbc-comment-balloon-inner' ).find('.mbc-comment-textarea').click();
+                    $( '.mbc-comment-balloon-inner' ).find('.mbc-comment-textarea').focus();
+                }, 700);
             } );
 
             $( delegate ).on( 'click', '.mbc-comment-balloon-inner .re-close-balloon', function ( e ) {
@@ -982,10 +977,6 @@ if ( MBC.enabled() )
             });
             //New icon inserted in the header -> resize file name
             APP.fitText($('.breadcrumbs'), $('#pname'), 30);
-        } );
-
-        $( document ).on( 'sse:ack', function ( ev, message ) {
-            config.id_client = message.data.clientId;
         } );
 
         $( document ).on( 'sse:comment', function ( ev, message ) {

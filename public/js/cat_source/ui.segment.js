@@ -15,7 +15,7 @@
             if (!_.isUndefined(chosen_suggestion)) {
                 var storedContributions = UI.getFromStorage('contribution-' + config.id_job + '-' + UI.getSegmentId(currentSegment));
                 if (storedContributions) {
-                    currentContribution = JSON.parse(storedContributions).data.matches[chosen_suggestion - 1];
+                    currentContribution = JSON.parse(storedContributions).matches[chosen_suggestion - 1];
 
                 }
             }
@@ -130,7 +130,8 @@
             var currentSegment = (segment)? segment : UI.currentSegment;
             if (currentSegment && this.enableTagProjection) {
                 // If the segment has tag projection enabled (has tags and has the enableTP class)
-                var tagProjectionEnabled = this.hasDataOriginalTags( currentSegment) && currentSegment.hasClass('enableTP');
+                var segmentNoTags = UI.removeAllTags( htmlDecode(currentSegment.find('.source').data('original')));
+                var tagProjectionEnabled = this.hasDataOriginalTags( currentSegment) && currentSegment.hasClass('enableTP') && segmentNoTags !== '';
                 // The segment is already been tagged
                 var dataAttribute = currentSegment.attr('data-tagprojection');
                 // If the segment has already be tagged
@@ -185,7 +186,8 @@
             }).done( function( data ) {
                 UI.render({
                     segmentToScroll: UI.getSegmentId(UI.currentSegment),
-                    segmentToOpen: UI.getSegmentId(UI.currentSegment)
+                    segmentToOpen: UI.getSegmentId(UI.currentSegment),
+                    applySearch: UI.body.hasClass('searchActive')
                 });
                 UI.checkWarnings(false);
             });
@@ -210,7 +212,8 @@
             }).done( function( data ) {
                 UI.render({
                     segmentToScroll: UI.getSegmentId(UI.currentSegment),
-                    segmentToOpen: UI.getSegmentId(UI.currentSegment)
+                    segmentToOpen: UI.getSegmentId(UI.currentSegment),
+                    applySearch: UI.body.hasClass('searchActive')
                 });
                 UI.checkWarnings(false);
             });
@@ -228,7 +231,7 @@
         decodeText: function(segment, text) {
             var decoded_text;
             if (UI.enableTagProjection && (UI.getSegmentStatus(segment) === 'draft' || UI.getSegmentStatus(segment) === 'new')
-                && !UI.checkXliffTagsInText(segment.translation) ) {
+                && !UI.checkXliffTagsInText(segment.translation) && UI.removeAllTags(segment.segment) !== '' ) {
                 decoded_text = UI.removeAllTags(text);
             } else {
                 decoded_text = text;
@@ -556,12 +559,16 @@
             return $('#segment-' + id);
         },
 
+        getSegmentsSplit: function(id) {
+            return $('section[id^="segment-'+ id +'"][data-split-original-id="'+id+'"]');
+        },
+
         getEditAreaBySegmentId: function(id) {
             return $('#segment-' + id + ' .targetarea');
         },
 
         segmentIsLoaded: function(segmentId) {
-            return UI.getSegmentById(segmentId).length > 0 ;
+            return UI.getSegmentById(segmentId).length > 0 || UI.getSegmentsSplit(segmentId).length > 0 ;
         },
         getContextBefore: function(segmentId) {
             var segment = $('#segment-' + segmentId);
@@ -760,13 +767,13 @@
             }
         },
         disableSegmentButtons: function ( sid ) {
-            var div =$("#segment-"+sid+"-buttons").find(".approved, .next-unapproved, .next-untranslated, .translated");
-            div.addClass('disabled').attr("disabled", false);
+            var div =$("#segment-"+sid+"-buttons").find(".approved, .next-unapproved, .next-untranslated, .translated, .guesstags");
+            div.addClass('disabled').attr("disabled", 'disabled');
 
         },
         enableSegmentsButtons: function ( sid ) {
-            var div =$("#segment-"+sid+"-buttons").find(".approved, .next-unapproved, .next-untranslated, .translated");
-            div.removeClass('disabled').attr("disabled", true);
+            var div =$("#segment-"+sid+"-buttons").find(".approved, .next-unapproved, .next-untranslated, .translated, .guesstags");
+            div.removeClass('disabled').attr("disabled", false);
         }
     });
 })(jQuery); 

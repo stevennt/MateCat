@@ -136,6 +136,7 @@ var SegmentStore = assign({}, EventEmitter.prototype, {
                 segment.fid = fid;
                 segment.edit_area_locked = false;
                 segment.modified = false;
+                segment.original_sid = segment.sid;
                 newSegments.push(this);
             }
 
@@ -171,7 +172,11 @@ var SegmentStore = assign({}, EventEmitter.prototype, {
     },
     getSegmentIndex(sid, fid) {
         return this._segments[fid].findIndex(function (segment, index) {
-            return parseInt(segment.get('sid')) === parseInt(sid);
+            if (sid.toString().indexOf("-") === -1) {
+                return parseInt(segment.get('sid')) === parseInt(sid);
+            } else {
+                return segment.get('sid') === sid;
+            }
         });
 
     },
@@ -392,7 +397,6 @@ var SegmentStore = assign({}, EventEmitter.prototype, {
         let lockedEditArea = segment.get('edit_area_locked');
         this._segments[fid] = this._segments[fid].setIn([index, 'edit_area_locked'], !lockedEditArea);
     },
-
     getSegmentByIdToJS(sid, fid) {
         return this._segments[fid].find(function (seg) {
             return seg.get('sid') == sid;
@@ -488,7 +492,13 @@ var SegmentStore = assign({}, EventEmitter.prototype, {
             errors: errors
         });
     },
-
+    setCrossLanguageContributionsToCache: function (sid, fid, contributions,errors) {
+        const index = this.getSegmentIndex(sid, fid);
+        this._segments[fid] = this._segments[fid].setIn([index, 'cl_contributions'], {
+            matches: contributions,
+            errors: errors
+        });
+    },
     setChosenContribution: function (sid, fid, index) {
         const segment_index = this.getSegmentIndex(sid, fid);
         this._segments[fid] = this._segments[fid].setIn([segment_index, 'chosenContributionIndex'], index);
@@ -673,6 +683,9 @@ AppDispatcher.register(function(action) {
             SegmentStore.setConfigTabs(action.tab, action.visible, action.open);
             SegmentStore.emitChange(action.actionType, action.tab, action.visible, action.open);
             break;
+        case SegmentConstants.MODIFY_TAB_VISIBILITY:
+            SegmentStore.emitChange(action.actionType, action.tabName, action.visible);
+            break;
         case SegmentConstants.SET_CONTRIBUTIONS_TO_CACHE:
             SegmentStore.setContributionsToCache(action.sid, action.fid, action.matches,action.errors);
             SegmentStore.emitChange(SegmentConstants.RENDER_SEGMENTS, SegmentStore._segments[action.fid], action.fid);
@@ -696,6 +709,11 @@ AppDispatcher.register(function(action) {
             _.forEach(SegmentStore._segments, function (item, index) {
                 SegmentStore.emitChange(SegmentConstants.RENDER_SEGMENTS, SegmentStore._segments[index], index);
             });
+            break;
+        case SegmentConstants.SET_CL_CONTRIBUTIONS:
+            SegmentStore.setCrossLanguageContributionsToCache(action.sid, action.fid, action.matches, action.errors);
+            SegmentStore.emitChange(SegmentConstants.RENDER_SEGMENTS, SegmentStore._segments[action.fid], action.fid);
+            SegmentStore.emitChange(action.actionType, action.sid, action.fid, action.matches, action.errors);
             break;
         case SegmentConstants.CHOOSE_CONTRIBUTION:
             SegmentStore.emitChange(action.actionType, action.sid, action.index);

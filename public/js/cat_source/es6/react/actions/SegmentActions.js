@@ -302,7 +302,15 @@ var SegmentActions = {
             open: open
         });
     },
-
+    setSegmentCrossLanguageContributions: function (sid, fid, contributions, errors) {
+        AppDispatcher.dispatch({
+            actionType: SegmentConstants.SET_CL_CONTRIBUTIONS,
+            sid: sid,
+            fid: fid,
+            matches: contributions,
+            errors: errors
+        });
+    },
     chooseContribution: function (sid, index) {
         AppDispatcher.dispatch({
             actionType: SegmentConstants.CHOOSE_CONTRIBUTION,
@@ -519,6 +527,37 @@ var SegmentActions = {
             index: index
         });
     },
+    setConcordanceResult: function (sid, data) {
+        AppDispatcher.dispatch({
+            actionType: SegmentConstants.CONCORDANCE_RESULT,
+            sid: sid,
+            data: data
+        });
+    },
+
+    modifyTabVisibility: function(tabName, visible) {
+        AppDispatcher.dispatch({
+            actionType: SegmentConstants.MODIFY_TAB_VISIBILITY,
+            tabName: tabName,
+            visible: visible
+        });
+    },
+    setConcordanceResult: function (sid, data) {
+        AppDispatcher.dispatch({
+            actionType: SegmentConstants.CONCORDANCE_RESULT,
+            sid: sid,
+            data: data
+        });
+    },
+
+    modifyTabVisibility: function(tabName, visible) {
+        AppDispatcher.dispatch({
+            actionType: SegmentConstants.MODIFY_TAB_VISIBILITY,
+            tabName: tabName,
+            visible: visible
+        });
+    },
+
     /************ Revise ***************/
     showSelection: function (sid, data) {
         AppDispatcher.dispatch({
@@ -550,10 +589,11 @@ var SegmentActions = {
         });
     },
 
-    showIssuesMessage: function (sid) {
+    showIssuesMessage: function ( sid, type ) {
         AppDispatcher.dispatch({
             actionType: SegmentConstants.SHOW_ISSUE_MESSAGE,
             sid: sid,
+            data: type
         });
     },
 

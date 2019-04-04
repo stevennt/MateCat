@@ -148,7 +148,7 @@ UI = {
 
     autopropagateConfirmNeeded: function () {
         var segment = UI.currentSegment;
-        if(this.currentSegmentTranslation.trim() == this.editarea.text().trim()) { //segment not modified
+        if(this.currentSegmentTranslation.trim() == this.editarea.text().trim() && !config.isReview) { //segment not modified
             return false;
         }
 
@@ -723,7 +723,7 @@ UI = {
 		}
 		$('#outer').removeClass('loading loadingBefore');
 		this.loadingMore = false;
-		this.setWaypoints();
+		setTimeout(UI.setWaypoints.bind(this), 2000);
         $(window).trigger('segmentsAdded',{ resp : d.data.files });
 	},
 
@@ -805,9 +805,9 @@ UI = {
 				$('mark.currSearchItem').removeClass('currSearchItem');
 				SearchUtils.markSearchResults(options);
 				if (SearchUtils.searchMode == 'normal') {
-					$('#segment-' + options.segmentToScroll + ' mark.searchMarker').first().addClass('currSearchItem');
+					$('section[id^="segment-' + options.segmentToScroll + '"] mark.searchMarker').first().addClass('currSearchItem');
 				} else {
-					$('#segment-' + options.segmentToScroll + ' .editarea mark.searchMarker').first().addClass('currSearchItem');
+					$('section[id^="segment-' + options.segmentToScroll + '"] .targetarea mark.searchMarker').first().addClass('currSearchItem');
 				}
 			}
 		}
@@ -916,9 +916,12 @@ UI = {
 	renderUntranslatedOutOfView: function() {
 		this.infiniteScroll = false;
 		config.last_opened_segment = this.nextUntranslatedSegmentId;
-		window.location.hash = this.nextUntranslatedSegmentId;
+		var segmentToScroll = (this.nextUntranslatedSegmentId) ? this.nextUntranslatedSegmentId : this.nextSegmentId;
+        window.location.hash = segmentToScroll;
         UI.unmountSegments();
-		this.render();
+		this.render({
+            segmentToScroll: segmentToScroll
+        });
 	},
 	reloadWarning: function() {
 		this.renderUntranslatedOutOfView();
@@ -1137,7 +1140,7 @@ UI = {
         var segment_id = UI.currentSegmentId;
         var escapedSegment = UI.decodePlaceholdersToText(UI.currentSegment.find('.source').html());
         // Take the .editarea content with special characters (Ex: ##$_0A$##) and transform the placeholders
-        var mainStr = htmlEncode(UI.postProcessEditarea(UI.currentSegment));
+        var mainStr = htmlEncode(UI.postProcessEditarea(UI.currentSegment)).replace(/&amp;/g, "&");
         $('.sub-editor.alternatives .overflow', segment).empty();
         $.each(d.data.editable, function(index) {
             // Decode the string from the server
@@ -1145,7 +1148,6 @@ UI = {
             // Make the diff between the text with the same codification
             var diff_obj = UI.execDiff(mainStr, transDecoded);
             var translation = UI.transformTextForLockTags(UI.dmp.diff_prettyHtml(diff_obj));
-            var html =
             $('.sub-editor.alternatives .overflow', segment).append('<ul class="graysmall" data-item="' + (index + 1) + '">' +
                 '<li class="sugg-source">' +
                 '   <span id="' + segment_id + '-tm-' + this.id + '-source" class="suggestion_source">' +
@@ -1511,7 +1513,12 @@ UI = {
 	startWarning: function() {
 		clearTimeout(UI.startWarningTimeout);
 		UI.startWarningTimeout = setTimeout(function() {
-			UI.checkWarnings(false);
+            // If the tab is not active avoid to make the warnings call
+            if (document.visibilityState === "hidden") {
+                UI.startWarning();
+            } else {
+                UI.checkWarnings(false);
+            }
 		}, config.warningPollingInterval);
 	},
 
@@ -1601,16 +1608,6 @@ UI = {
             APP.addNotification(notification);
 		}
 	},
-    segmentLexiQA: function (_segment) {
-        var segment = _segment;
-        //new API?
-        if (_segment.raw) {
-            segment = _segment.raw
-        }
-        var translation = $('.editarea', segment).text().replace(/\uFEFF/g, '');
-        var id_segment = UI.getSegmentId(segment);
-        LXQ.doLexiQA(segment, translation, id_segment, false, function () {});
-    },
     segmentQA : function( segment ) {
         if ( ! ( segment instanceof UI.Segment) ) {
             segment = new UI.Segment( segment );
@@ -1817,6 +1814,7 @@ UI = {
             id_before: idBefore,
             context_after: contextAfter,
             id_after: idAfter,
+            by_status: byStatus
         };
         if(isSplitted) {
             this.setStatus($('#segment-' + id_segment), status);
@@ -2126,7 +2124,7 @@ UI = {
 
                 SegmentActions.setSegmentPropagation(UI.getSegmentId(this), UI.getSegmentFileId(this), true ,UI.getSegmentId(segment));
 
-                var trans = $('.editarea', this ).text().replace(/\uFEFF/g,'');
+                var trans = UI.postProcessEditarea(segment, '.targetarea').replace(/\uFEFF/g,'');
                 LXQ.doLexiQA(this,trans,UI.getSegmentId(this),true,null);
             });
 
@@ -2167,7 +2165,7 @@ UI = {
         }
 		this.detectFirstLast();
 		this.lastSegmentWaypoint = this.lastSegment.waypoint(function(direction) {
-			if (direction === 'down') {
+			if (direction === 'down' && !UI.noMoreSegmentsAfter) {
 				this.destroy();
 				if (UI.infiniteScroll) {
 					if (!UI.blockGetMoreSegments) {
@@ -2182,7 +2180,7 @@ UI = {
 		}, UI.downOpts);
 
         this.firstSegmentWaypoint = this.firstSegment.waypoint(function(direction) {
-			if (direction === 'up') {
+			if (direction === 'up' && !UI.noMoreSegmentsBefore) {
                 this.destroy();
 				UI.getMoreSegments('before');
 			}
@@ -2287,7 +2285,7 @@ UI = {
 
         // var cursorPos = APP.getCursorPosition(this.editarea.get(0));
         $('.undoCursorPlaceholder').remove();
-        if ($('.rangySelectionBoundary').closest('.editarea').length) {
+        if ($('.rangySelectionBoundary').closest('.editarea').length && !$('body').hasClass('rtl-target')) {
             $('.rangySelectionBoundary').after('<span class="undoCursorPlaceholder monad" contenteditable="false"></span>');
         }
         if(action !== 'paste'){
@@ -2317,45 +2315,6 @@ UI = {
     isKorean: function () {
         var l = config.target_rfc;
         return l == 'ko-KR';
-    },
-    start: function () {
-
-        // TODO: the following variables used to be set in UI.init() which is called
-        // very during rendering. Those have been moved here because of the init change
-        // of SegmentFilter, see below.
-        UI.firstLoad = true;
-        UI.body = $('body');
-        UI.checkSegmentsArray = {} ;
-        UI.localStorageCurrentSegmentId = "currentSegmentId-"+config.id_job+config.password;
-        UI.setShortcuts();
-        // If some icon is added on the top header menu, the file name is resized
-        APP.addDomObserver($('.header-menu')[0], function() {
-            APP.fitText($('.breadcrumbs'), $('#pname'), 30);
-        });
-        setBrowserHistoryBehavior();
-        $("article").each(function() {
-            APP.fitText($('.filename h2', $(this)), $('.filename h2', $(this)), 30);
-        });
-
-        var initialRenderPromise = UI.render();
-
-        initialRenderPromise.done(function() {
-            if ( SegmentFilter.enabled() && SegmentFilter.getStoredState().reactState ) {
-                SegmentFilter.openFilter();
-            }
-            UI.checkWarnings(true);
-        });
-
-        $('html').trigger('start');
-
-        if (LXQ.enabled()) {
-            $('#lexiqabox').removeAttr("style");
-            LXQ.initPopup();
-        }
-    },
-    restart: function () {
-        UI.unmountSegments();
-        this.start();
     },
     /**
      * After User click on Translated or T+>> Button

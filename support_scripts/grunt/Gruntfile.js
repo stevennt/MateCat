@@ -59,7 +59,7 @@ module.exports = function(grunt) {
 
 
 
-    var es2015Preset = require('babel-preset-es2015');
+    var es2015Preset = require('babel-preset-env');
     var reactPreset = require('babel-preset-react');
 
     function s4() {
@@ -558,6 +558,7 @@ module.exports = function(grunt) {
         }
     });
 
+    grunt.loadNpmTasks('grunt-notify');
     grunt.loadNpmTasks('grunt-contrib-concat');
     grunt.loadNpmTasks('grunt-contrib-watch');
     grunt.loadNpmTasks('grunt-contrib-jshint');

@@ -1,7 +1,7 @@
 <?php
 use ActivityLog\Activity;
 use ActivityLog\ActivityLogStruct;
-use Exceptions\NotFoundError;
+use Exceptions\NotFoundException;
 use TmKeyManagement\UserKeysModel;
 
 
@@ -138,7 +138,7 @@ class catController extends viewController {
             // function and not-found handled via exception.
             $this->findJobByIdAndPassword();
             $this->featureSet->run('handleProjectType', $this);
-        } catch( NotFoundError $e ){
+        } catch( NotFoundException $e ){
             $this->job_not_found = true;
             return;
         }
@@ -349,8 +349,12 @@ class catController extends viewController {
                 if( $team->type == Constants_Teams::PERSONAL ){
                     $ownerMail = $team->getMembers()[0]->getUser()->getEmail();
                 } else {
-
-                    $ownerMail = ( new Users_UserDao() )->setCacheTTL( 60 * 60 * 24 )->getByUid( $this->project->id_assignee )->getEmail();
+                    $assignee = ( new Users_UserDao() )->setCacheTTL( 60 * 60 * 24 )->getByUid( $this->project->id_assignee );
+                    if ($assignee) {
+                        $ownerMail = $assignee->getEmail();
+                    } else {
+                        $ownerMail = INIT::$SUPPORT_MAIL;
+                    }
                     $membersIdList = array_map( function( $memberStruct ){
                         /**
                          * @var $memberStruct \Teams\MembershipStruct
@@ -518,7 +522,7 @@ class catController extends viewController {
     private function getEditLogClass() {
         $return = "";
 
-        $editLogModel = new EditLog_EditLogModel( $this->jid, $this->password );
+        $editLogModel = new EditLog_EditLogModel( $this->jid, $this->password, $this->featureSet );
         $issue = $editLogModel->getMaxIssueLevel();
 
         $dao = new EditLog_EditLogDao(Database::obtain());

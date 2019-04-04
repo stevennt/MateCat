@@ -40,7 +40,7 @@ class Upload {
     public function __construct( $uploadToken = null ) {
 
         if ( empty( $uploadToken ) ) {
-            $this->uploadToken = Utils::create_guid( 'API' );
+            $this->uploadToken = Utils::createToken( 'API' );
         } else {
             $this->uploadToken = $uploadToken;
         }
@@ -205,7 +205,7 @@ class Upload {
 
             $mod_name = $this->fixFileName( $fileUp->name );
 
-            if( !$this->_isValidFileName( $mod_name ) ){
+            if( !Utils::isValidFileName( $mod_name ) ){
                 $this->setObjectErrorOrThrowException(
                         $fileUp,
                         new Exception ( __METHOD__ . " -> Invalid File Name '" . ZipArchiveExtended::getFileName( $fileUp->name ) ."'" )
@@ -248,6 +248,18 @@ class Upload {
 
     }
 
+    protected function upCountNameCallback( $matches ) {
+        $index = isset( $matches[ 1 ] ) ? intval( $matches[ 1 ] ) + 1 : 1;
+        $ext   = isset( $matches[ 2 ] ) ? $matches[ 2 ] : '';
+
+        return '_(' . $index . ')' . $ext;
+    }
+
+    protected function upCountName( $name ) {
+        return preg_replace_callback(
+                '/(?:(?:_\(([\d]+)\))?(\.[^.]+))?$/', [ $this, 'upCountNameCallback' ], $name, 1
+        );
+    }
 
     /**
      *
@@ -258,7 +270,7 @@ class Upload {
      * @return string
      * @throws Exception
      */
-    public function fixFileName( $stringName ) {
+    public function fixFileName( $stringName, $upCount = true ) {
 
         //Fix Bug: Zip files, file names with contiguous whitespaces ( replaced with only one _ and not found inside the zip on download )
         $string = preg_replace( '/\p{Zs}/u', chr(0x1A), $stringName ); // substitute whitespaces
@@ -266,23 +278,11 @@ class Upload {
         $string = preg_replace( '/' . chr(0x1A) . '/', '_', $string ); //strips whitespace and odd chars
         $string = filter_var( $string, FILTER_SANITIZE_STRING, array( 'flags' => FILTER_FLAG_STRIP_LOW | FILTER_FLAG_NO_ENCODE_QUOTES ) );
 
-        return $string;
-
-    }
-
-    protected function _isValidFileName( $string ) {
-
-        if (
-                strpos( $this->dirUpload . DIRECTORY_SEPARATOR . $string, '..' ) !== false ||
-                strpos( $this->dirUpload . DIRECTORY_SEPARATOR . $string, '%2E%2E' ) !== false ||
-                strpos( $string, '.' ) === 0 ||
-                strpos( $string, '%2E' ) === 0
-        ) {
-            //Directory Traversal! or Linux hidden file uploaded
-            return false;
+        while ( is_file( $this->dirUpload . DIRECTORY_SEPARATOR . $string ) && $upCount ) {
+            $string = $this->upCountName( $string );
         }
 
-        return true;
+        return $string;
 
     }
 

@@ -14,7 +14,7 @@ use Analysis\Workers\FastAnalysis;
 use ArrayObject;
 use BasicFeatureStruct;
 use Constants_Engines;
-use Contribution\ContributionStruct;
+use Contribution\ContributionSetStruct;
 use Contribution\Set;
 use Database;
 use Engine;
@@ -30,6 +30,7 @@ use Klein\Klein;
 use Log;
 use Projects_ProjectStruct;
 use stdClass;
+use TaskRunner\Commons\QueueElement;
 use TmKeyManagement_MemoryKeyDao;
 use TmKeyManagement_MemoryKeyStruct;
 use TmKeyManagement_TmKeyManagement;
@@ -179,6 +180,16 @@ class Mmt extends BaseFeature {
             $config[ 'job_id' ] = $jobStruct->id;
             $config[ 'secret_key' ] = self::getSecretKey();
 
+        }
+
+        return $config;
+
+    }
+
+    public static function analysisBeforeMTGetContribution( $config, Engines_AbstractEngine $engine, QueueElement $queueElement ){
+
+        if( $engine instanceof Engines_MMT ){
+            $config[ 'secret_key' ] = self::getSecretKey();
         }
 
         return $config;
@@ -340,12 +351,12 @@ class Mmt extends BaseFeature {
      * Called in @see \setTranslationController::evalSetContribution()
      *
      * @param                        $response
-     * @param ContributionStruct     $contributionStruct
+     * @param ContributionSetStruct  $contributionStruct
      * @param Projects_ProjectStruct $projectStruct
      *
-     * @return ContributionStruct|null
+     * @return ContributionSetStruct|null
      */
-    public function filterSetContributionMT( $response, ContributionStruct $contributionStruct, Projects_ProjectStruct $projectStruct ){
+    public function filterSetContributionMT( $response, ContributionSetStruct $contributionStruct, Projects_ProjectStruct $projectStruct ){
 
         /**
          * When a project is created, it's features and used plugins are stored in project_metadata,
