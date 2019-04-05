@@ -212,36 +212,6 @@ API.SEGMENT = {
             url: "/?action=getContribution"
         });
     },
-    /**
-     * Return a list of contribution from a id_segment
-     * @param id_segment
-     * @return Contributions - Promise
-     */
-    getContributions: function (id_segment,target) {
-        let contextBefore = UI.getContextBefore(id_segment);
-        let contextAfter = UI.getContextAfter(id_segment);
-        // check if this function is ok for al cases
-        let txt = UI.prepareTextToSend(target);
-        let data = {
-            action: 'getContribution',
-            password: config.password,
-            is_concordance: 0,
-            id_segment: id_segment,
-            text: txt,
-            id_job: config.id_job,
-            num_results: UI.numContributionMatchesResults,
-            id_translator: config.id_translator,
-            context_before: contextBefore,
-            context_after: contextAfter
-        };
-
-        return $.ajax({
-            async: true,
-            data: data,
-            type: "post",
-            url: "/?action=getContribution"
-        });
-    },
 
     /**
      * Return a list of contribution from a id_segment
@@ -256,6 +226,10 @@ API.SEGMENT = {
         var idAfter = UI.getIdAfter(id_segment);
         // check if this function is ok for al cases
         let txt = UI.prepareTextToSend(target);
+        //Cross language matches
+        if ( UI.crossLanguageSettings ) {
+            var crossLangsArray = [UI.crossLanguageSettings.primary, UI.crossLanguageSettings.secondary];
+        }
         let data = {
             action: 'getContribution',
             password: config.password,
@@ -269,7 +243,8 @@ API.SEGMENT = {
             id_before: idBefore,
             context_after: contextAfter,
             id_after: idAfter,
-            id_client: config.id_client
+            id_client: config.id_client,
+            cross_language: crossLangsArray
         };
 
         return $.ajax({

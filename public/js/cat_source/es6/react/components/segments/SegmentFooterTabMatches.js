@@ -25,7 +25,7 @@ class SegmentFooterTabMatches extends React.Component {
         let self = this;
         let matchesProcessed = [];
         _.each(matches, function (el, index) {
-            if ( _.isUndefined(this.segment) || (el.segment === '') || (el.translation === '')) return false;
+            if ( _.isUndefined(el.segment) || (el.segment === '') || (el.translation === '')) return false;
             let item = {};
             item.id = el.id;
             item.disabled = (el.id == '0') ? true : false;
@@ -139,11 +139,11 @@ class SegmentFooterTabMatches extends React.Component {
     }
 
     checkChosenSuggestionIndex() {
-        if (config.auto_copy_suggestion
-            && ((Speech2Text.enabled() && Speech2Text.isContributionToBeAllowed(match)) || !Speech2Text.enabled()) //Todo: check Speech2Text
+        if ( ((Speech2Text.enabled() && Speech2Text.isContributionToBeAllowed(match)) || !Speech2Text.enabled() ) //Todo: check Speech2Text
             && this.props.segment.status === 'NEW'
             && !this.props.segment.chosenContributionIndex
             && this.props.segment.contributions
+            && this.props.segment.contributions.matches
             && this.props.segment.contributions.matches.length > 0) {
             setTimeout(() => {
                 this.chooseSuggestion(this.props.segment.sid, 1);
@@ -175,7 +175,7 @@ class SegmentFooterTabMatches extends React.Component {
 
     render() {
         let matches = [];
-        if (this.props.segment.contributions && this.props.segment.contributions.matches.length > 0) {
+        if (this.props.segment.contributions && this.props.segment.contributions.matches && this.props.segment.contributions.matches.length > 0) {
             let tpmMatches = this.processContributions(this.props.segment.contributions.matches);
             let self = this;
             tpmMatches.forEach(function (match, index) {
@@ -212,7 +212,7 @@ class SegmentFooterTabMatches extends React.Component {
                 matches.push( item );
             } );
 
-        } else if (this.props.segment.contributions.matches.length && this.props.segment.contributions.matches.length === 0 ){
+        } else if (this.props.segment.contributions && this.props.segment.contributions.matches && this.props.segment.contributions.matches.length === 0 ){
             if((config.mt_enabled)&&(!config.id_translator)) {
                 matches.push( <ul key={0} className="graysmall message">
                     <li>No matches could be found for this segment. Please, contact <a href="mailto:support@matecat.com">support@matecat.com</a> if you think this is an error.</li>

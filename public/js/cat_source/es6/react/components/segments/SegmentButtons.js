@@ -4,7 +4,6 @@
  */
 let React = require('react');
 let SegmentStore = require('../../stores/SegmentStore');
-let SegmentMainButtons = require('../SegmentMainButtons').default;
 
 class SegmentButton extends React.Component {
 

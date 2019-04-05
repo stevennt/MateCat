@@ -501,16 +501,12 @@ var SegmentActions = {
         for (let index = 0; index < requestes.length; index++) {
             let request = requestes[index];
             let segment = SegmentStore.getSegmentByIdToJS(request.sid, request.fid);
-            if (!segment.contributions || (segment.contributions && segment.contributions.matches.length === 0)) {
+            if (!segment.contributions || !segment.contributions.matches || (segment.contributions && segment.contributions.matches.length === 0)) {
                 API.SEGMENT.getContributions(request.sid, request.target)
                     .done(function (response) {
-                        AppDispatcher.dispatch({
-                            actionType: SegmentConstants.SET_CONTRIBUTIONS_TO_CACHE,
-                            sid: request.sid,
-                            fid: request.fid,
-                            matches: response.data.matches,
-                            errors: response.errors
-                        });
+                        if ( response.errors ) {
+                            SegmentActions.setContribution(request.sid, request.fid, null, response.errors)
+                        }
                     })
                     .fail(function (error) {
                         UI.failedConnection(sid, 'getContributions');
@@ -518,6 +514,15 @@ var SegmentActions = {
             }
         }
 
+    },
+    setContribution(sid, fid, matches, errors) {
+        AppDispatcher.dispatch({
+            actionType: SegmentConstants.SET_CONTRIBUTIONS_TO_CACHE,
+            sid: sid,
+            fid: fid,
+            matches: matches,
+            errors: errors
+        });
     },
     setChosenContributionIndex: function (sid, fid, index) {
         AppDispatcher.dispatch({

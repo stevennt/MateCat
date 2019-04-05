@@ -11,10 +11,11 @@ if (config.translation_matches_enabled) {
         var $segment = UI.getSegmentById(message.data.id_segment);
         var $segmentSplitted = UI.getSegmentById(message.data.id_segment + "-1");
         if ( $segment.length > 0 ) {
-            UI.getContribution_success(message.data, $segment);
+            SegmentActions.setContribution(message.data.id_segment, UI.getSegmentFileId($segment), message.data.matches, []);
         } else if ($segmentSplitted.length > 0 ) {
             $('section[id^="segment-' + message.data.id_segment + '"]').each(function (  ) {
                 UI.getContribution_success(message.data, $(this));
+                SegmentActions.setContribution(UI.getSegmentId($(this)), UI.getSegmentFileId( $(this)), message.data.matches);
             });
         }
     } );

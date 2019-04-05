@@ -113,12 +113,7 @@ class SegmentFooter extends React.Component {
         return allTabs
     }
     modifyTabVisibility(tabName, visible) {
-        let tabs;
-        if ( this.state.tabs.tabName ) {
-            tabs = _.cloneDeep(this.state.tabs);
-        } else {
-            tabs = this.tabs;
-        }
+        let tabs = _.cloneDeep(this.state.tabs);
         tabs[tabName].visible = visible;
         tabs[tabName].enabled = visible;
         if ( _.size(this.state.tabs) ) {
@@ -213,12 +208,14 @@ class SegmentFooter extends React.Component {
         });
     }
     setDefaultTabOpen( sid, tabName) {
-        if (this.tabs[tabName]) {
+        let tabs = jQuery.extend(true, {}, this.state.tabs);
+        if (tabs[tabName]) {
             //Close all tabs
-            for ( let item in this.tabs ) {
-                this.tabs[item].open = false
+            for ( let item in tabs ) {
+                tabs[item].open = false
             }
-            this.tabs[tabName].open = true;
+            tabs[tabName].open = true;
+            this.setState({tabs});
         }
     }
     openTab(sid, tabCode) {
@@ -322,9 +319,9 @@ class SegmentFooter extends React.Component {
     getTabIndex(tab) {
         switch(tab.code) {
             case 'tm':
-                return this.props.segment.contributions.matches.length;
+                return this.props.segment.contributions.matches && this.props.segment.contributions.matches.length;
             case 'cl':
-                return this.props.segment.cl_contributions.matches.length;
+                return this.props.segment.cl_contributions.matches && this.props.segment.cl_contributions.matches.length;
             default:
                 return tab.index;
         }

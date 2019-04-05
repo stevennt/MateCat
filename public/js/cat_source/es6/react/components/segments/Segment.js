@@ -53,10 +53,10 @@ class Segment extends React.Component {
                 alertNotTranslatedYet(this.props.segment.sid);
             }
         } else {
+            UI.segmentQA($(this.section));
 
             // TODO Remove this block
             /**************************/
-
             //From EditAreaClick
             UI.closeTagAutocompletePanel();
             UI.removeHighlightCorrespondingTags($(this.section));
