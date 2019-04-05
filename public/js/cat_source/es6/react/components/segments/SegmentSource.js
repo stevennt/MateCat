@@ -57,19 +57,14 @@ class SegmentSource extends React.Component {
     }
 
     beforeRenderActions() {
-        if (!this.props.isReviewImproved) {
-            var area = $("#segment-" + this.props.segment.sid + " .source");
-            this.props.beforeRenderOrUpdate(area);
-        }
+        var area = $("#segment-" + this.props.segment.sid + " .source");
+        this.props.beforeRenderOrUpdate(area);
+
     }
 
     afterRenderActions() {
-        if (!this.props.isReviewImproved) {
-            let area = $("#segment-" + this.props.segment.sid + " .source");
-            this.props.afterRenderOrUpdate(area);
-        }
-        this.addPowerTips()
-
+        var area = $("#segment-" + this.props.segment.sid + " .source");
+        this.props.afterRenderOrUpdate(area);
     }
 
     addPowerTips() {

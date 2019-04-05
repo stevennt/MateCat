@@ -34,7 +34,6 @@ module.exports = function(grunt) {
 	    cssBase + 'jquery.powertip.min.css',
 	    cssBase + 'lxq-style.css',
 	    cssBase + 'lexiqa.css',
-        cssBase + 'sass/review_improved.scss',
         cssBase + 'sass/segmentsFilter.scss',
         cssBase + 'sass/cattool.scss',
         cssBase + 'sass/speech2text.scss',
@@ -67,21 +66,11 @@ module.exports = function(grunt) {
         .toString(16).substring(1);
     }
 
-    function stripPrefixForTemplates(filePath) {
-        /**
-         * Strip '../../public/js/cat_source/templates/'
-         * from template identifiers.
-         */
-        var dirsToStrip = 6 ;
-        var strippedPath = filePath.split('/')
-        .splice( dirsToStrip ).join('/')
-        .replace('.hbs', '') ;
 
-        return strippedPath ;
-    }
 
     // Configuration goes here
     grunt.initConfig( {
+
 
         /**
          * = Browseriry
@@ -125,20 +114,6 @@ module.exports = function(grunt) {
                     basePath + 'cat_source/es6/react/*.js'
                 ],
                 dest: buildPath + 'cat-react.js'
-            },
-            qaReportsVersions: {
-                options: {
-                    transform: [
-                        [ 'babelify', { presets: [ es2015Preset, reactPreset ] } ]
-                    ],
-                    browserifyOptions: {
-                        paths: [ __dirname + '/node_modules' ]
-                    }
-                },
-                src: [
-                    basePath + 'cat_source/es6/react/components/review_improved/review_improved.qa_report.js',
-                ],
-                dest: buildPath + 'qa-report-improved.js'
             },
             qualityReport: {
                 options: {
@@ -232,18 +207,9 @@ module.exports = function(grunt) {
                     basePath + 'cat_source/review_extended/review_extended.footer.js',
                     basePath + 'cat_source/review_extended/review_extended.ui_extension.js',
                     basePath + 'cat_source/review_extended/review_extended.common_events.js',
-                    basePath + 'cat_source/review_improved/review_improved.js',
-                    basePath + 'cat_source/review_improved/review_improved.common_extensions.js',
-                    basePath + 'cat_source/review_improved/review_improved.common_events.js',
-                    basePath + 'cat_source/review_improved/review_improved.translate_extensions.js',
-                    basePath + 'cat_source/review_improved/review_improved.translate_events.js',
-                    basePath + 'cat_source/review_improved/review_improved.review_extension.js',
-                    basePath + 'cat_source/review_improved/review_improved.review_events.js',
-                    basePath + 'cat_source/review_improved/review_improved.rangy-hack.js',
 
                     basePath + 'cat_source/segment_filter.js',
                     basePath + 'cat_source/segment_filter.*.js',
-
 
                     basePath + 'cat_source/speech2text.js',
                     basePath + 'tm.js',
@@ -581,8 +547,6 @@ module.exports = function(grunt) {
     grunt.registerTask('bundle:js', [
         'browserify:libs',
         'browserify:components',
-        'browserify:qaReportsVersions',
-        'browserify:qualityReport',
         'concat:libs',
         'concat:libs_upload',
         'concat:semantic',
