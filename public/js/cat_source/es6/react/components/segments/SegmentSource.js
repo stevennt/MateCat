@@ -158,6 +158,11 @@ class SegmentSource extends React.Component {
 
             var re = new RegExp( '\\b('+ glossaryTerm_escaped.trim() + ')\\b', "gi" );
 
+            //If source languace is Cyrillic
+            if ( cleanString.match(/[\w\u0430-\u044f]+/ig) ) {
+                re = new RegExp( glossaryTerm_escaped.trim(), "gi" );
+            }
+
             cleanString = cleanString.replace( re, '<mark class="inGlossary">$1</mark>' );
 
 
