@@ -17,13 +17,15 @@ class Constants_TranslationStatus {
     const STATUS_FIXED      = 'FIXED';
     const STATUS_REBUTTED   = 'REBUTTED';
 
-    const DB_STATUS_NEW        = 1;
-    const DB_STATUS_DRAFT      = 2;
-    const DB_STATUS_TRANSLATED = 3;
-    const DB_STATUS_APPROVED   = 4;
-    const DB_STATUS_REJECTED   = 5;
-    const DB_STATUS_FIXED      = 6;
-    const DB_STATUS_REBUTTED   = 7;
+    public static $DB_STATUSES_MAP = [
+            self::STATUS_NEW        => 1,
+            self::STATUS_DRAFT      => 2,
+            self::STATUS_TRANSLATED => 3,
+            self::STATUS_APPROVED   => 4,
+            self::STATUS_REJECTED   => 5,
+            self::STATUS_FIXED      => 6,
+            self::STATUS_REBUTTED   => 7
+    ] ;
 
     public static $STATUSES = array(
             self::STATUS_NEW,
@@ -53,4 +55,7 @@ class Constants_TranslationStatus {
             self::STATUS_REBUTTED
     );
 
+    public static function isReviewedStatus( $status ) {
+        return in_array( $status, Constants_TranslationStatus::$REVISION_STATUSES );
+    }
 }

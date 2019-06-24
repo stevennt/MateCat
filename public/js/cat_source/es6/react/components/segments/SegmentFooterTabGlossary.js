@@ -173,7 +173,14 @@ class SegmentFooterTabGlossary extends React.Component {
     copyItemInEditArea(translation) {
         SegmentActions.replaceEditAreaTextContent(this.props.segment.sid,this.props.segment.fid,translation)
     }
-
+    onPasteEvent(e) {
+        // cancel paste
+        e.preventDefault();
+        // get text representation of clipboard
+        var text = (e.originalEvent || e).clipboardData.getData('text/plain');
+        // insert text manually
+        document.execCommand("insertHTML", false, text);
+    }
     renderMatches() {
         let htmlResults = [];
         if (Object.size(this.props.segment.glossary)) {
@@ -296,11 +303,9 @@ class SegmentFooterTabGlossary extends React.Component {
         });
         if (config.tms_enabled) {
             html = <div className={loading}>
-                <div ref={(source) => this.source = source} className="input search-source" contentEditable="true"
-                     onKeyPress={this.searchInGlossary.bind(this)}/>
-                <div ref={(target) => this.target = target} className="input search-target" contentEditable="true"
-                     onKeyDown={this.onEnterSetItem.bind(this)}
-                     onKeyUp={this.onKeyUpSetItem.bind(this)}/>
+                <div ref={(source)=>this.source=source} className="input search-source" contentEditable="true" onKeyPress={this.searchInGlossary.bind(this)} onPaste={this.onPasteEvent.bind(this)}/>
+                <div ref={(target)=>this.target=target} className="input search-target" contentEditable="true" onKeyDown={this.onEnterSetItem.bind(this)} onPaste={this.onPasteEvent.bind(this)}
+                    onKeyUp={this.onKeyUpSetItem.bind(this)}/>
                 {this.state.enableAddButton ? (
                     <span className="set-glossary" onClick={this.onClickSetItem.bind(this)}/>
                 ) : (
@@ -326,9 +331,8 @@ class SegmentFooterTabGlossary extends React.Component {
         }
         return (
 
-            <div key={"container_" + this.props.code}
-                 className={"tab sub-editor " + this.props.active_class + " " + this.props.tab_class}
-                 id={"segment-" + this.props.id_segment + " " + this.props.tab_class}>
+            <div key={"container_" + this.props.code} className={"tab sub-editor "+ this.props.active_class + " " + this.props.tab_class}
+                 id={"segment-" + this.props.id_segment + "-" + this.props.tab_class}>
                 <div className="overflow">
                     {html}
                 </div>

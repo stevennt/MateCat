@@ -168,7 +168,8 @@ API.SEGMENT = {
     approveSegments: function (segments) {
         var data = {
             segments_id: segments,
-            status: 'approved'
+            status: 'approved',
+            client_id: config.id_client
         };
         return $.ajax({
             async: true,
@@ -180,7 +181,8 @@ API.SEGMENT = {
     translateSegments: function (segments) {
         var data = {
             segments_id: segments,
-            status: 'translated'
+            status: 'translated',
+            client_id: config.id_client
         };
         return $.ajax({
             async: true,
@@ -200,7 +202,8 @@ API.SEGMENT = {
             id_job: config.job_id,
             num_results: UI.numMatchesResults,
             id_translator: config.id_translator,
-            password: config.password
+            password: config.password,
+            id_client: config.id_client
         };
         return $.ajax({
             async: true,
@@ -209,16 +212,24 @@ API.SEGMENT = {
             url: "/?action=getContribution"
         });
     },
+
     /**
      * Return a list of contribution from a id_segment
      * @param id_segment
+     * @param target
      * @return Contributions - Promise
      */
-    getContributions: function (id_segment,target) {
-        let contextBefore = UI.getContextBefore(id_segment);
-        let contextAfter = UI.getContextAfter(id_segment);
+    getContributions: function (id_segment, target) {
+        var contextBefore = UI.getContextBefore(id_segment);
+        var idBefore = UI.getIdBefore(id_segment);
+        var contextAfter = UI.getContextAfter(id_segment);
+        var idAfter = UI.getIdAfter(id_segment);
         // check if this function is ok for al cases
         let txt = UI.prepareTextToSend(target);
+        //Cross language matches
+        if ( UI.crossLanguageSettings ) {
+            var crossLangsArray = [UI.crossLanguageSettings.primary, UI.crossLanguageSettings.secondary];
+        }
         let data = {
             action: 'getContribution',
             password: config.password,
@@ -229,7 +240,11 @@ API.SEGMENT = {
             num_results: UI.numContributionMatchesResults,
             id_translator: config.id_translator,
             context_before: contextBefore,
-            context_after: contextAfter
+            id_before: idBefore,
+            context_after: contextAfter,
+            id_after: idAfter,
+            id_client: config.id_client,
+            cross_language: crossLangsArray
         };
 
         return $.ajax({

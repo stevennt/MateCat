@@ -4,6 +4,34 @@
 
 if (config.translation_matches_enabled) {
 
+    $('html').on('copySourceToTarget', 'section', function () {
+        UI.setChosenSuggestion(0);
+    });
+    $( document ).on( 'sse:contribution', function ( ev, message ) {
+        var $segment = UI.getSegmentById(message.data.id_segment);
+        var $segmentSplitted = UI.getSegmentById(message.data.id_segment + "-1");
+        if ( $segment.length > 0 ) {
+            SegmentActions.setContribution(message.data.id_segment, UI.getSegmentFileId($segment), message.data.matches, []);
+        } else if ($segmentSplitted.length > 0 ) {
+            $('section[id^="segment-' + message.data.id_segment + '"]').each(function (  ) {
+                UI.getContribution_success(message.data, $(this));
+                SegmentActions.setContribution(UI.getSegmentId($(this)), UI.getSegmentFileId( $(this)), message.data.matches);
+            });
+        }
+    } );
+
+    $( document ).on( 'sse:cross_language_matches', function ( ev, message ) {
+        var $segment = UI.getSegmentById(message.data.id_segment);
+        var $segmentSplitted = UI.getSegmentById(message.data.id_segment + "-1");
+        if ( $segment.length > 0 ) {
+            SegmentActions.setSegmentCrossLanguageContributions(message.data.id_segment, UI.getSegmentFileId($segment), message.data.matches, []);
+        } else if ($segmentSplitted.length > 0 ) {
+            $('section[id^="segment-' + message.data.id_segment + '"]').each(function (  ) {
+                SegmentActions.setSegmentCrossLanguageContributions(UI.getSegmentId($(this)), UI.getSegmentFileId($(this)), message.data.matches, []);
+            });
+        }
+    } );
+
 $.extend(UI, {
 	copySuggestionInEditarea: function(segment, translation, editarea, match, decode, auto, which, createdBy) {
 		if (typeof (decode) == "undefined") {
@@ -11,8 +39,6 @@ $.extend(UI, {
 		}
 		var percentageClass = this.getPercentuageClass(match);
 		if ($.trim(translation) !== '') {
-
-			//ANTONIO 20121205 editarea.text(translation).addClass('fromSuggestion');
 
 			if (decode) {
 				translation = htmlDecode(translation);
@@ -87,7 +113,6 @@ $.extend(UI, {
 
         if ($(current).hasClass('loaded') && current.find('.footer .matches .overflow').text().length && !callNewContributions) {
             SegmentActions.addClassToSegment(UI.getSegmentId(current), 'loaded');
-            $(".loader", current).removeClass('loader_on');
             if (!next) {
                 // this.blockButtons = false;
                 this.segmentQA(segment);
@@ -96,7 +121,6 @@ $.extend(UI, {
                 // this.blockButtons = false;
             return $.Deferred().resolve();
 		}
-        $(".loader", current).addClass('loader_on');
 		if ((!current.length) && (next)) {
 			return $.Deferred().resolve();
 		}
@@ -120,19 +144,28 @@ $.extend(UI, {
 		txt = view2rawxliff(txt);
 		// Attention: As for copysource, what is the correct file format in attributes? I am assuming html encoded and "=>&quot;
 
-            if (!next) {
-                $(".loader", current).addClass('loader_on');
-            }
+        // `next` and `untranslated next` are the same
+        if ((next == 2) && (this.nextSegmentId == this.nextUntranslatedSegmentId)) {
+            return $.Deferred().resolve();
+        }
 
-            // `next` and `untranslated next` are the same
-            if ((next == 2) && (this.nextSegmentId == this.nextUntranslatedSegmentId)) {
-                return $.Deferred().resolve();
-            }
+        var contextBefore = UI.getContextBefore(id);
+        var idBefore = UI.getIdBefore(id);
+        var contextAfter = UI.getContextAfter(id);
+        var idAfter = UI.getIdAfter(id);
 
-            var contextBefore = UI.getContextBefore(id);
-            var idBefore = UI.getIdBefore(id);
-            var contextAfter = UI.getContextAfter(id);
-            var idAfter = UI.getIdAfter(id);
+        if ( _.isUndefined(config.id_client) ) {
+            setTimeout(() => {
+                UI.getContribution(segment, next);
+            }, 3000);
+            console.log("SSE: ID_CLIENT not found");
+            return $.Deferred().resolve();
+        }
+
+        //Cross language matches
+        if ( UI.crossLanguageSettings ) {
+            var crossLangsArray = [UI.crossLanguageSettings.primary, UI.crossLanguageSettings.secondary];
+        }
 
 		return APP.doRequest({
 			data: {
@@ -148,66 +181,58 @@ $.extend(UI, {
                 id_before: idBefore,
                 context_after: contextAfter,
                 id_after: idAfter,
+                id_client: config.id_client,
+                cross_language: crossLangsArray
 			},
 			context: $('#segment-' + id),
 			error: function() {
 				UI.failedConnection(0, 'getContribution');
+				UI.showContributionError(this);
 			},
 			success: function(d) {
-				if (d.errors.length)
-					UI.processErrors(d.errors, 'getContribution');
-				UI.getContribution_success(d, this);
-			},
-			complete: function() {
-				UI.getContribution_complete(current);
+				if (d.errors.length) {
+                    UI.processErrors(d.errors, 'getContribution');
+                    UI.renderContributionErrors(d.errors, this);
+                }
 			}
 		});
 	},
-	getContribution_complete: function(n) {
-		$(".loader", n).removeClass('loader_on');
-	},
-    getContribution_success: function(d, segment) {
-        this.addInStorage('contribution-' + config.id_job + '-' + UI.getSegmentId(segment), JSON.stringify(d), 'contribution');
-        this.processContributions(d, segment);
-        this.segmentQA(segment);
+    getContribution_success: function(data, segment) {
+        this.addInStorage('contribution-' + config.id_job + '-' + UI.getSegmentId(segment), JSON.stringify(data), 'contribution');
+        this.processContributions(data, segment);
+        if (UI.currentSegmentId === UI.getSegmentId(segment))  {
+            this.segmentQA(segment);
+        }
     },
-  	processContributions: function(d, segment) {
-		if(!d) return true;
-		this.renderContributions(d, segment);
+  	processContributions: function(data, segment) {
+		if(!data) return true;
+		this.renderContributions(data, segment);
 		this.saveInUndoStack();
-		// this.blockButtons = false;  //Used for offline mode
-
-        // TODO Move to SegmentFooter Component
-		if (d.data.matches && d.data.matches.length > 0) {
-			$('.submenu li.tab-switcher-tm a span', segment).text(' (' + d.data.matches.length + ')');
-		}
-		this.renderContributionErrors(d.errors, segment);
+		this.blockButtons = false;  //Used for offline mode
     },*/
 
-    /*renderContributions: function(d, segment) {
-        if(!d) return true;
+    /*renderContributions: function(data, segment) {
+        if(!data) return true;
 
         var editarea = $('.editarea', segment);
+
+
         if (!$('.sub-editor.matches', segment).length) {
             SegmentActions.createFooter(UI.getSegmentId(segment));
         }
-        if ( d.data.hasOwnProperty('matches') && d.data.matches.length) {
-            var editareaLength = editarea.text().trim().length;
-            var translation = d.data.matches[0].translation;
 
-            var match = d.data.matches[0].match;
+        SegmentActions.setSegmentContributions(UI.getSegmentId(segment), UI.getSegmentFileId(segment), data.matches, data.errors);
+
+        if ( data.matches && data.matches.length > 0 && _.isUndefined(data.matches[0].error)) {
+            var editareaLength = editarea.text().trim().length;
+            var translation = data.matches[0].translation;
+
+            var match = data.matches[0].match;
 
             var segment_id = segment.attr('id');
-            $('.sub-editor.matches .overflow .graysmall .message', segment).remove();
-            $('.tab-switcher-tm .number', segment).text('');
-            SegmentActions.setSegmentContributions(UI.getSegmentId(segment), d.data.matches, d.data.fieldTest);
+            $('.sub-editor.matches .overflow .graysmall .message, .tab.sub-editor.matches .engine-error-item', segment).remove();
+            // $('.tab-switcher-tm .number', segment).text('');
 
-            // UI.setDeleteSuggestion(segment);
-            // UI.setContributionSourceDiff(segment);
-            //If Tag Projection is enable I take out the tags from the contributions
-            // if (!UI.enableTagProjection) {
-            //     UI.markSuggestionTags(segment);
-            // }
             if (editareaLength === 0) {
 
                 UI.setChosenSuggestion(1, segment);
@@ -239,17 +264,20 @@ $.extend(UI, {
 
             $('.translated', segment).removeAttr('disabled');
             $('.draft', segment).removeAttr('disabled');
-        } else {
-            // TODO Move to SegmentFooter Component
-            $('.tab-switcher-tm .number', segment).text('');
-            if((config.mt_enabled)&&(!config.id_translator)) {
-                $('.sub-editor.matches .overflow', segment).html('<ul class="graysmall message"><li>No matches could be found for this segment. Please, contact <a' +
-                    ' href="mailto:support@matecat.com">support@matecat.com</a> if you think this is an error.</li></ul>');
-            } else {
-                $('.sub-editor.matches .overflow', segment).html('<ul class="graysmall message"><li>No match found for this segment</li></ul>');
-            }
         }
+
         SegmentActions.addClassToSegment(UI.getSegmentId(segment), 'loaded');
+    },
+    showContributionError: function(segment) {
+        $('.tab-switcher-tm .number', segment).text('');
+        if((config.mt_enabled)&&(!config.id_translator)) {
+            $('.sub-editor.matches .engine-errors', segment).html('<ul class="engine-error-item graysmall"><li class="engine-error">' +
+                '<div class="warning-img"></div><span class="engine-error-message warning">' +
+                'Oops we got an Error. Please, contact <a' +
+                ' href="mailto:support@matecat.com">support@matecat.com</a>.</span></li></ul>');
+        }
+        SegmentActions.setSegmentContributions(UI.getSegmentId(segment), UI.getSegmentFileId(segment), [], [{}]);
+
     },*/
     /*autoCopySuggestionEnabled: function () {
         return true;
@@ -257,23 +285,37 @@ $.extend(UI, {
     /*renderContributionErrors: function(errors, segment) {
         $('.tab.sub-editor.matches .engine-errors', segment).empty();
         $('.tab.sub-editor.matches .engine-errors', segment).hide();
+        var percentClass = "";
+        var messageClass = "";
+        var imgClass = "";
+        var  messageTypeText = '';
         $.each(errors, function(){
-            var percentClass = "";
-            var messageClass = "";
-            var imgClass = "";
-            var  messageTypeText = '';
-            if(this.code == '-2001') {
+            if(this.code === -2001) {
                 console.log('ERROR -2001');
                 percentClass = "per-red";
                 messageClass = 'error';
                 imgClass = 'error-img';
                 messageTypeText = 'Error: ';
             }
-            else if (this.code == '-2002') {
+            else if (this.code === -2002) {
+                console.log('WARNING -2002');
+                percentClass = "per-orange";
+                messageClass = 'warning';
+                imgClass = 'warning-img';
+                messageTypeText = 'Warning: ';
+            } else if (this.code === -1000) {
                 console.log('WARNING -2002');
                 messageClass = 'warning';
                 imgClass = 'warning-img';
                 messageTypeText = 'Warning: ';
+            } else if (this.code === -4) {
+                console.log('WARNING -4');
+                percentClass = "per-orange";
+                messageClass = 'warning';
+                imgClass = 'warning-img';
+                messageTypeText = 'Warning: ';
+                this.message = 'Oops we got an Error. Please, contact <a' +
+                ' href="mailto:support@matecat.com">support@matecat.com</a>.'
             }
             else {
                 return;
@@ -284,8 +326,9 @@ $.extend(UI, {
                 '<div class="' + imgClass + '"></div><span class="engine-error-message ' + messageClass + '">' + messageTypeText + this.message +
                 '</span></li></ul>');
         });
+        SegmentActions.setSegmentContributions(UI.getSegmentId(segment), UI.getSegmentFileId(segment), [], errors);
     },*/
-	setDeleteSuggestion: function(source, target) {
+	setDeleteSuggestion: function(source, target, id) {
 
         return APP.doRequest({
             data: {
@@ -296,7 +339,8 @@ $.extend(UI, {
                 password: config.password,
                 seg: source,
                 tra: target,
-                id_translator: config.id_translator
+                id_translator: config.id_translator,
+                id_match: id
             },
             error: function() {
                 UI.failedConnection(0, 'deleteContribution');

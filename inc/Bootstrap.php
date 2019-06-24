@@ -28,13 +28,13 @@ class Bootstrap {
         self::$CONFIG       = parse_ini_file( self::$_ROOT . DIRECTORY_SEPARATOR . 'inc/config.ini', true );
         $OAUTH_CONFIG       = @parse_ini_file( self::$_ROOT . DIRECTORY_SEPARATOR . 'inc/oauth_config.ini', true );
 
-        register_shutdown_function( 'Bootstrap::fatalErrorHandler' );
+        register_shutdown_function( [ 'Bootstrap', 'fatalErrorHandler' ] );
 
         $mv = parse_ini_file( 'version.ini' );
         self::$_INI_VERSION = $mv['version'];
 
         $this->_setIncludePath();
-        spl_autoload_register( 'Bootstrap::loadClass' );
+        spl_autoload_register( [ 'Bootstrap', 'loadClass' ] );
         require_once 'Predis/autoload.php';
         @include_once 'vendor/autoload.php';
 
@@ -353,7 +353,13 @@ class Bootstrap {
         if ( stripos( PHP_SAPI, 'cli' ) === false ) {
 
             register_shutdown_function( 'Bootstrap::sessionClose' );
-            INIT::$PROTOCOL = isset( $_SERVER[ 'HTTPS' ] ) ? "https" : "http";
+            // Get HTTPS server status
+            $localProto = isset( $_SERVER[ 'HTTPS' ] ) ? "https" : "http";
+            // Override if header is set from load balancer
+            if (isset($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+                $localProto = $_SERVER['HTTP_X_FORWARDED_PROTO'];
+            }
+            INIT::$PROTOCOL = $localProto;
             INIT::$HTTPHOST = INIT::$PROTOCOL . "://" . $_SERVER[ 'HTTP_HOST' ];
 
         } else {
@@ -362,17 +368,17 @@ class Bootstrap {
 
         INIT::obtain(); //load configurations
 
-        $fileSystem = trim( shell_exec( "df -T " . escapeshellcmd( INIT::$STORAGE_DIR ) . "/files_storage/ | awk '{print $2 }' | sed -n 2p" ) );
-
-        if ( self::$CONFIG['ENV'] == 'production' ) {
-            if( stripos( $fileSystem, 'nfs' ) === false && self::$CONFIG['CHECK_FS'] ){
-                die( 'Wrong Configuration! You must mount your remote filesystem to the production or change the storage directory.' );
-            }
-        } else {
-            if( stripos( $fileSystem, 'nfs' ) !== false && self::$CONFIG['CHECK_FS'] ){
-                die( 'Wrong Configuration! You must un-mount your remote filesystem or change the local directory.' );
-            }
-        }
+//        $fileSystem = trim( shell_exec( "df -T " . escapeshellcmd( INIT::$STORAGE_DIR ) . "/files_storage/ | awk '{print $2 }' | sed -n 2p" ) );
+//
+//        if ( self::$CONFIG['ENV'] == 'production' ) {
+//            if( stripos( $fileSystem, 'nfs' ) === false && self::$CONFIG['CHECK_FS'] ){
+//                die( 'Wrong Configuration! You must mount your remote filesystem to the production or change the storage directory.' );
+//            }
+//        } else {
+//            if( stripos( $fileSystem, 'nfs' ) !== false && self::$CONFIG['CHECK_FS'] ){
+//                die( 'Wrong Configuration! You must un-mount your remote filesystem or change the local directory.' );
+//            }
+//        }
 
         Features::setIncludePath();
 

@@ -1,4 +1,9 @@
 (function($, undefined) {
+
+    $( document ).on( 'sse:bulk_segment_status_change', function ( ev, message ) {
+        UI.bulkChangeStatusCallback(message.data.segment_ids, message.data.status);
+    } );
+
     $.extend(UI, {
 
         getSegmentStatus: function (segment) {
@@ -15,7 +20,7 @@
             if (!_.isUndefined(chosen_suggestion)) {
                 var storedContributions = UI.getFromStorage('contribution-' + config.id_job + '-' + UI.getSegmentId(currentSegment));
                 if (storedContributions) {
-                    currentContribution = JSON.parse(storedContributions).data.matches[chosen_suggestion - 1];
+                    currentContribution = JSON.parse(storedContributions).matches[chosen_suggestion - 1];
 
                 }
             }
@@ -130,7 +135,8 @@
             var currentSegment = (segment)? segment : UI.currentSegment;
             if (currentSegment && this.enableTagProjection) {
                 // If the segment has tag projection enabled (has tags and has the enableTP class)
-                var tagProjectionEnabled = this.hasDataOriginalTags( currentSegment) && currentSegment.hasClass('enableTP');
+                var segmentNoTags = UI.removeAllTags( htmlDecode(currentSegment.find('.source').data('original')));
+                var tagProjectionEnabled = this.hasDataOriginalTags( currentSegment) && currentSegment.hasClass('enableTP') && segmentNoTags !== '';
                 // The segment is already been tagged
                 var dataAttribute = currentSegment.attr('data-tagprojection');
                 // If the segment has already be tagged
@@ -185,7 +191,8 @@
             }).done( function( data ) {
                 UI.render({
                     segmentToScroll: UI.getSegmentId(UI.currentSegment),
-                    segmentToOpen: UI.getSegmentId(UI.currentSegment)
+                    segmentToOpen: UI.getSegmentId(UI.currentSegment),
+                    applySearch: UI.body.hasClass('searchActive')
                 });
                 UI.checkWarnings(false);
             });
@@ -210,7 +217,8 @@
             }).done( function( data ) {
                 UI.render({
                     segmentToScroll: UI.getSegmentId(UI.currentSegment),
-                    segmentToOpen: UI.getSegmentId(UI.currentSegment)
+                    segmentToOpen: UI.getSegmentId(UI.currentSegment),
+                    applySearch: UI.body.hasClass('searchActive')
                 });
                 UI.checkWarnings(false);
             });
@@ -228,7 +236,7 @@
         decodeText: function(segment, text) {
             var decoded_text;
             if (UI.enableTagProjection && (UI.getSegmentStatus(segment) === 'draft' || UI.getSegmentStatus(segment) === 'new')
-                && !UI.checkXliffTagsInText(segment.translation) ) {
+                && !UI.checkXliffTagsInText(segment.translation) && UI.removeAllTags(segment.segment) !== '' ) {
                 decoded_text = UI.removeAllTags(text);
             } else {
                 decoded_text = text;
@@ -406,6 +414,11 @@
                 id = UI.parsedHash.splittedSegmentId ;
             }
 
+            if ( typeof id === 'undefined' ) {
+                console.debug( 'id is undefined', id);
+                return ;
+            }
+
             if ( MBC.enabled() && MBC.wasAskedByCommentHash( id ) ) {
                 MBC.openSegmentComment( UI.Segment.findEl( id ) ) ;
             } else {
@@ -556,12 +569,16 @@
             return $('#segment-' + id);
         },
 
+        getSegmentsSplit: function(id) {
+            return $('section[id^="segment-'+ id +'"][data-split-original-id="'+id+'"]');
+        },
+
         getEditAreaBySegmentId: function(id) {
             return $('#segment-' + id + ' .targetarea');
         },
 
         segmentIsLoaded: function(segmentId) {
-            return UI.getSegmentById(segmentId).length > 0 ;
+            return UI.getSegmentById(segmentId).length > 0 || UI.getSegmentsSplit(segmentId).length > 0 ;
         },
         getContextBefore: function(segmentId) {
             var segment = $('#segment-' + segmentId);
@@ -713,7 +730,7 @@
                 });
             } else {
                 return API.SEGMENT.approveSegments(segmentsArray).then(function ( response ) {
-                    self.bulkChangeStatusCallback(response, segmentsArray, "APPROVED");
+                    self.checkUnchangebleSegments(response, segmentsArray, "APPROVED");
                 });
             }
         },
@@ -727,12 +744,17 @@
                 });
             } else {
                 return API.SEGMENT.translateSegments(segmentsArray).then(function ( response ) {
-                    self.bulkChangeStatusCallback(response, segmentsArray, "TRANSLATED");
+                    self.checkUnchangebleSegments(response, segmentsArray, "TRANSLATED");
                 });
             }
         },
-        bulkChangeStatusCallback: function( response, segmentsArray, status) {
-            if (response.data && response.unchangeble_segments.length === 0) {
+        checkUnchangebleSegments: function(response) {
+            if (response.unchangeble_segments.length > 0) {
+                UI.showTranslateAllModalWarnirng();
+            }
+        },
+        bulkChangeStatusCallback: function( segmentsArray, status) {
+            if (segmentsArray.length > 0) {
                 segmentsArray.forEach(function ( item ) {
                     var $segment = UI.getSegmentById(item);
                     if ( $segment.length > 0) {
@@ -741,32 +763,18 @@
                         UI.setSegmentModified( $segment, false ) ;
                         UI.disableTPOnSegment( $segment )
                     }
-                })
-            } else if (response.unchangeble_segments.length > 0) {
-                var arrayMapped = _.map(segmentsArray, function ( item ) {
-                    return parseInt(item);
                 });
-                var array = _.difference(arrayMapped, response.unchangeble_segments);
-                array.forEach(function ( item ) {
-                    var $segment = UI.getSegmentById(item);
-                    if ( $segment > 0) {
-                        var fileId = UI.getSegmentFileId(UI.getSegmentById(item));
-                        SegmentActions.setStatus(item, fileId, status);
-                        UI.setSegmentModified( $segment, false ) ;
-                        UI.disableTPOnSegment( $segment )
-                    }
-                });
-                UI.showTranslateAllModalWarnirng();
+                setTimeout(CatToolActions.reloadSegmentFilter, 500);
             }
         },
         disableSegmentButtons: function ( sid ) {
-            var div =$("#segment-"+sid+"-buttons").find(".approved, .next-unapproved, .next-untranslated, .translated");
-            div.addClass('disabled').attr("disabled", false);
+            var div =$("#segment-"+sid+"-buttons").find(".approved, .next-unapproved, .next-untranslated, .translated, .guesstags");
+            div.addClass('disabled').attr("disabled", 'disabled');
 
         },
         enableSegmentsButtons: function ( sid ) {
-            var div =$("#segment-"+sid+"-buttons").find(".approved, .next-unapproved, .next-untranslated, .translated");
-            div.removeClass('disabled').attr("disabled", true);
+            var div =$("#segment-"+sid+"-buttons").find(".approved, .next-unapproved, .next-untranslated, .translated, .guesstags");
+            div.removeClass('disabled').attr("disabled", false);
         }
     });
 })(jQuery); 

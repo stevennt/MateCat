@@ -28,14 +28,6 @@ class SegmentFooterTabConcordance extends React.Component {
         this.searchSubmit = this.searchSubmit.bind(this);
     }
 
-    componentWillUnmount() {
-        SegmentStore.removeListener(SegmentConstants.FIND_CONCORDANCE, this.findConcordance);
-    }
-
-    componentDidMount() {
-        SegmentStore.addListener(SegmentConstants.FIND_CONCORDANCE, this.findConcordance.bind(this));
-    }
-
     allowHTML(string) {
         return {__html: string};
     }
@@ -81,9 +73,7 @@ class SegmentFooterTabConcordance extends React.Component {
         //type 0 = source, 1 = target
         let self = this;
         API.SEGMENT.getConcordance(query, type)
-            .done(function (d) {
-                self.renderConcordances(d, type);
-            }).fail(function () {
+            .fail(function () {
             UI.failedConnection(this, 'getConcordance');
         });
         this.setState({
@@ -96,26 +86,26 @@ class SegmentFooterTabConcordance extends React.Component {
         return {__html: string};
     }
 
-    renderConcordances(d, in_target) {
+    renderConcordances(sid, data) {
         let self = this;
         let segment = UI.currentSegment;
         let segment_id = UI.currentSegmentId;
         let array = [];
 
-        if (d.data.matches.length) {
-            _.each(d.data.matches, function (item, index) {
+        if (data.matches.length) {
+            _.each(data.matches, function (item, index) {
                 if ((item.segment === '') || (item.translation === ''))
                     return;
                 let prime = (index < self.state.numDisplayContributionMatches) ? ' prime' : '';
 
                 let cb = item.created_by;
 
-                let leftTxt = (in_target) ? item.translation : item.segment;
+                let leftTxt = item.segment;
                 leftTxt = UI.decodePlaceholdersToText(leftTxt);
                 leftTxt = leftTxt.replace(/\#\{/gi, "<mark>");
                 leftTxt = leftTxt.replace(/\}\#/gi, "</mark>");
 
-                let rightTxt = (in_target) ? item.segment : item.translation;
+                let rightTxt = item.translation;
                 rightTxt = UI.decodePlaceholdersToText(rightTxt);
                 rightTxt = rightTxt.replace(/\#\{/gi, "<mark>");
                 rightTxt = rightTxt.replace(/\}\#/gi, "</mark>");
@@ -176,6 +166,16 @@ class SegmentFooterTabConcordance extends React.Component {
         });
     }
 
+    componentDidMount() {
+        SegmentStore.addListener(SegmentConstants.FIND_CONCORDANCE, this.findConcordance.bind(this));
+        SegmentStore.addListener(SegmentConstants.CONCORDANCE_RESULT, this.renderConcordances.bind(this));
+
+    }
+
+    componentWillUnmount() {
+        SegmentStore.removeListener(SegmentConstants.FIND_CONCORDANCE, this.findConcordance);
+        SegmentStore.removeListener(SegmentConstants.CONCORDANCE_RESULT, this.renderConcordances.bind(this));
+    }
 
     render() {
         let html = '',
@@ -226,7 +226,7 @@ class SegmentFooterTabConcordance extends React.Component {
 
             <div key={"container_" + this.props.code}
                  className={"tab sub-editor " + this.props.active_class + " " + this.props.tab_class + " " + isExtendedClass + " " + haveResults}
-                 id={"segment-" + this.props.id_segment + " " + this.props.tab_class}>
+                 id={"segment-" + this.props.id_segment + "-" + this.props.tab_class}>
                 <div className="overflow">
                     {html}
                     <div className="results">

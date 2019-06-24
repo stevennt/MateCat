@@ -10,6 +10,7 @@ class UploadHandler {
 
         $this->options = [
                 'script_url'              => $this->getFullUrl() . '/',
+                'upload_token'            => $_COOKIE[ 'upload_session' ],
                 'upload_dir'              => Utils::uploadDirFromSessionCookie( $_COOKIE[ 'upload_session' ] ),
                 'upload_url'              => $this->getFullUrl() . '/files/',
                 'param_name'              => 'files',
@@ -29,7 +30,7 @@ class UploadHandler {
     }
 
     protected function getFullUrl() {
-        $https = !empty( $_SERVER[ 'HTTPS' ] ) && $_SERVER[ 'HTTPS' ] !== 'off';
+        $https = INIT::$PROTOCOL === 'https';
         return
                 ( $https ? 'https://' : 'http://' ) .
                 ( !empty( $_SERVER[ 'REMOTE_USER' ] ) ? $_SERVER[ 'REMOTE_USER' ] . '@' : '' ) .
@@ -70,18 +71,41 @@ class UploadHandler {
         ) ) );
     }
 
+    /**
+     * @param $fileName
+     *
+     * @throws Exception
+     */
+    protected static function _validateFileName( $fileName ){
+        if ( !Utils::isValidFileName( $fileName ) ) {
+            throw new Exception( "Invalid File Name" );
+        }
+    }
+
+    /**
+     * @param $token
+     *
+     * @throws Exception
+     */
+    protected static function _validateToken( $token ){
+        if( !Utils::isTokenValid( $token ) ){
+            throw new Exception( "Invalid Upload Token." );
+        }
+    }
+
     protected function validate( $uploaded_file, $file, $error, $index ) {
         //TODO: these errors are shown in the UI but are not user friendly.
 
         if ( $error ) {
             $file->error = $error;
-
             return false;
         }
 
-        if ( !$this->_isValidFileName( $file ) ) {
-            $file->error = "Invalid File Name";
-
+        try {
+            self::_validateFileName( $file->name );
+            self::_validateToken( $this->options[ 'upload_token' ] );
+        } catch( Exception $e ){
+            $file->error = $e->getMessage();
             return false;
         }
 
@@ -286,6 +310,12 @@ class UploadHandler {
             return $this->delete();
         }
 
+        if( !Utils::isTokenValid( $_COOKIE[ 'upload_session' ] ) ){
+            $info = [ new stdClass() ];
+            $info[ 0 ]->error = "Invalid Upload Token. Check your browser, cookies must be enabled for this domain.";
+            $this->flush( $info );
+        }
+
         $upload = isset( $_FILES[ $this->options[ 'param_name' ] ] ) ? $_FILES[ $this->options[ 'param_name' ] ] : null;
 
         $info = [];
@@ -350,23 +380,27 @@ class UploadHandler {
         }
         //check for server misconfiguration
 
-        header( 'Vary: Accept' );
+        $this->flush( $info );
+
+    }
+
+    public function flush( $info ){
+
         $json     = json_encode( $info );
-        $redirect = isset( $_REQUEST[ 'redirect' ] ) ?
-                stripslashes( $_REQUEST[ 'redirect' ] ) : null;
+        $redirect = isset( $_REQUEST[ 'redirect' ] ) ? stripslashes( $_REQUEST[ 'redirect' ] ) : null;
+
+        header( 'Vary: Accept' );
+        header( 'Content-type: application/json' );
 
         if ( $redirect ) {
             header( 'Location: ' . sprintf( $redirect, rawurlencode( $json ) ) );
             return;
         }
 
-        if ( isset( $_SERVER[ 'HTTP_ACCEPT' ] ) && ( strpos( $_SERVER[ 'HTTP_ACCEPT' ], 'application/json' ) !== false ) ) {
-            header( 'Content-type: application/json' );
-        } else {
-            header( 'Content-type: text/plain' );
-        }
-
         echo $json;
+
+        die();
+
     }
 
     public function delete() {
@@ -382,6 +416,15 @@ class UploadHandler {
         if ( isset( $_REQUEST[ 'file' ] ) ) {
             $raw_file  = explode( DIRECTORY_SEPARATOR, $_REQUEST[ 'file' ] );
             $file_name = array_pop( $raw_file );
+        }
+
+        try {
+            self::_validateFileName( $file_name );
+            self::_validateToken( $this->options[ 'upload_token' ] );
+        } catch( Exception $e ){
+            header( 'Content-type: application/json' );
+            echo json_encode( [ "code" => -1, "error" => $e->getMessage() ] );
+            return false;
         }
 
         $file_info = FilesStorage::pathinfo_fix( $file_name );
@@ -533,22 +576,6 @@ class UploadHandler {
         }
 
         return false;
-    }
-
-    protected function _isValidFileName( $fileUp ) {
-
-        if (
-                strpos( $this->options[ 'upload_dir' ] . $fileUp->name, '..' ) !== false ||
-                strpos( $this->options[ 'upload_dir' ] . $fileUp->name, '%2E%2E' ) !== false ||
-                strpos( $fileUp->name, '.' ) === 0 ||
-                strpos( $fileUp->name, '%2E' ) === 0
-        ) {
-            //Directory Traversal!
-            return false;
-        }
-
-        return true;
-
     }
 
 }

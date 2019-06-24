@@ -70,9 +70,16 @@ class convertFileController extends ajaxController {
         $this->validateSourceLang();
         $this->validateTargetLangs();
 
-        if ( empty( $this->file_name ) ) {
+        if( !Utils::isTokenValid( $this->cookieDir ) ){
+            $this->result[ 'code' ]     = -19; // No Good, Default
+            $this->result[ 'errors' ][] = array( "code" => -19, "message" => "Invalid Upload Token." );
+            return false;
+        }
+
+        if ( !Utils::isValidFileName( $this->file_name ) || empty( $this->file_name ) ) {
             $this->result[ 'code' ]     = -1; // No Good, Default
-            $this->result[ 'errors' ][] = array( "code" => -1, "message" => "Error: missing file name." );
+            $this->result[ 'errors' ][] = array( "code" => -1, "message" => "Invalid File." );
+            return false;
         }
 
         if( !empty( $this->result[ 'errors' ] ) ){

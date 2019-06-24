@@ -302,7 +302,15 @@ var SegmentActions = {
             open: open
         });
     },
-
+    setSegmentCrossLanguageContributions: function (sid, fid, contributions, errors) {
+        AppDispatcher.dispatch({
+            actionType: SegmentConstants.SET_CL_CONTRIBUTIONS,
+            sid: sid,
+            fid: fid,
+            matches: contributions,
+            errors: errors
+        });
+    },
     chooseContribution: function (sid, index) {
         AppDispatcher.dispatch({
             actionType: SegmentConstants.CHOOSE_CONTRIBUTION,
@@ -493,16 +501,12 @@ var SegmentActions = {
         for (let index = 0; index < requestes.length; index++) {
             let request = requestes[index];
             let segment = SegmentStore.getSegmentByIdToJS(request.sid, request.fid);
-            if (!segment.contributions || (segment.contributions && segment.contributions.matches.length === 0)) {
+            if (!segment.contributions || !segment.contributions.matches || (segment.contributions && segment.contributions.matches.length === 0)) {
                 API.SEGMENT.getContributions(request.sid, request.target)
                     .done(function (response) {
-                        AppDispatcher.dispatch({
-                            actionType: SegmentConstants.SET_CONTRIBUTIONS_TO_CACHE,
-                            sid: request.sid,
-                            fid: request.fid,
-                            matches: response.data.matches,
-                            errors: response.errors
-                        });
+                        if ( response.errors ) {
+                            SegmentActions.setContribution(request.sid, request.fid, null, response.errors)
+                        }
                     })
                     .fail(function (error) {
                         UI.failedConnection(sid, 'getContributions');
@@ -510,6 +514,15 @@ var SegmentActions = {
             }
         }
 
+    },
+    setContribution(sid, fid, matches, errors) {
+        AppDispatcher.dispatch({
+            actionType: SegmentConstants.SET_CONTRIBUTIONS_TO_CACHE,
+            sid: sid,
+            fid: fid,
+            matches: matches,
+            errors: errors
+        });
     },
     setChosenContributionIndex: function (sid, fid, index) {
         AppDispatcher.dispatch({
@@ -519,6 +532,37 @@ var SegmentActions = {
             index: index
         });
     },
+    setConcordanceResult: function (sid, data) {
+        AppDispatcher.dispatch({
+            actionType: SegmentConstants.CONCORDANCE_RESULT,
+            sid: sid,
+            data: data
+        });
+    },
+
+    modifyTabVisibility: function(tabName, visible) {
+        AppDispatcher.dispatch({
+            actionType: SegmentConstants.MODIFY_TAB_VISIBILITY,
+            tabName: tabName,
+            visible: visible
+        });
+    },
+    setConcordanceResult: function (sid, data) {
+        AppDispatcher.dispatch({
+            actionType: SegmentConstants.CONCORDANCE_RESULT,
+            sid: sid,
+            data: data
+        });
+    },
+
+    modifyTabVisibility: function(tabName, visible) {
+        AppDispatcher.dispatch({
+            actionType: SegmentConstants.MODIFY_TAB_VISIBILITY,
+            tabName: tabName,
+            visible: visible
+        });
+    },
+
     /************ Revise ***************/
     showSelection: function (sid, data) {
         AppDispatcher.dispatch({
@@ -550,10 +594,11 @@ var SegmentActions = {
         });
     },
 
-    showIssuesMessage: function (sid) {
+    showIssuesMessage: function ( sid, type ) {
         AppDispatcher.dispatch({
             actionType: SegmentConstants.SHOW_ISSUE_MESSAGE,
             sid: sid,
+            data: type
         });
     },
 

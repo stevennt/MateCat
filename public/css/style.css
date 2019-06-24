@@ -918,12 +918,14 @@ ENABLE FOLLOWING RULE AND DELETE SUBSEQUENT WHEN DOWNLOAD OF THE SINGLE FILE WIL
     background: -moz-linear-gradient(top, #09beec, #119ec4);
     background: linear-gradient(top, #09beec, #119ec4);
     text-transform: uppercase;
+    user-select: none;
 }
 
 .buttons .approved.disabled,
 .buttons .next-unapproved.disabled ,
 .buttons .next-untranslated.disabled ,
-.buttons .translated.disabled {
+.buttons .translated.disabled,
+.buttons .guesstags.disabled{
     pointer-events: none;
     color: #666 !important;
     border-color: #666;
@@ -1094,6 +1096,7 @@ article .approved:active {
     font-size: 18px;
     margin: -6px 25px -7px 25px;
     color: #fff !important;
+    user-select: none;
 }
 
 .approved,
@@ -1486,6 +1489,10 @@ section.editor .body > .text {
     width: 100%;
 }
 
+/*.submenu {*/
+    /*display: none;*/
+/*}*/
+
 .popup .submenu {
     display: block;
     padding-top: 20px;
@@ -1507,6 +1514,7 @@ section.editor .body > .text {
     z-index: 1;
     border-bottom: 1px solid #cccccc;
     cursor: pointer;
+    user-select: none;
 }
 
 .submenu li.active {
@@ -1555,6 +1563,17 @@ body.noGlossary .tab-switcher-gl {
     text-shadow: none;
 }
 
+.tab-switcher.loading-tab a {
+    color: #929292;
+    padding-right: 36px;
+}
+
+.loading-tab .loader.loader_on {
+    left: unset;
+    right: 12px;
+    top: 6px;
+}
+
 .notification {
     background: #f5f5f5 url(../img/point.gif) 0 0 repeat-x;
     -moz-border-radius: 2px;
@@ -1601,8 +1620,12 @@ body .footer.showMatches .sub-editor.open {
 }
 
 .sub-editor.matches .overflow {
-    min-height: 27px;
+    min-height: 50px;
 }
+.sub-editor.matches .overflow span.loader {
+    bottom: 20px;
+}
+
 
 .addtmx-tr .open-popup-addtm-tr {
     height: 13px;
@@ -3106,29 +3129,50 @@ body.rtl-target .editor .editarea span {
 
 .error-img {
     background: #c5351c url(../img/warning.png) no-repeat center;
-    background-size: 12px;
-    width: 14px;
-    height: 14px;
+    background-size: 17px;
+    width: 22px;
+    height: 22px;
     margin: 0;
     border-radius: 5px;
-    margin-left: -20px;
-    top: 2px;
+    margin-left: -28px;
+    top: -4px;
     position: relative;
     float: left;
 }
 
 .warning-img {
-    background: #FF9900 url(../img/warning.png) no-repeat center;
-    background-size: 12px;
-    width: 14px;
-    height: 14px;
+    background: #FF9900 url(../../img/warning.png) no-repeat center;
+    background-size: 17px;
+    width: 22px;
+    height: 22px;
     margin: 0;
     border-radius: 5px;
-    margin-left: -20px;
-    top: 2px;
+    margin-left: -28px;
+    top: -4px;
     position: relative;
     float: left;
 }
+
+.engine-errors {
+    position: absolute;
+    top: 13px;
+    width: 100%;
+}
+
+.engine-error-item.graysmall:hover {
+    background-color: #fff;
+    border-top: unset;
+}
+
+.engine-error-item.graysmall:hover span {
+    color: unset !important;
+}
+
+.engine-error-item.graysmall {
+    border-top: unset;
+    cursor: default;
+}
+
 
 .ice-locked-label {
     font-size: 11px;
@@ -3616,6 +3660,16 @@ span.locked.tag-html-container-close {
     display: none !important;
 }
 
+.locked.inside-attribute {
+    background-color: unset !important;
+}
+
+
+
+.locked::selection, span.locked a::selection {
+    background-color: transparent;
+}
+
 .editarea .locked,
 .source .locked,
 .target .locked,
@@ -3648,15 +3702,18 @@ span.locked.tag-html-container-close {
 .editarea .locked:hover,
 .source .locked:hover {
     background-color: #dddff0;
+    transition: 0.3s ease;
 }
 
-.editarea .locked.mismatch,
-.source .locked.mismatch,
-.locked.mismatch-old,
-.editarea .locked.mismatch .locked,
-.source .locked.mismatch .locked,
-.locked.mismatch-old .locked {
-    color: red !important;
+
+
+.editor .editarea .locked.mismatch:hover,
+.editor .editarea .locked.mismatch:hover,
+.source .locked.mismatch:hover,
+.locked.mismatch-old
+{
+    background-color: #f9d7ca;
+    transition: 0.3s ease;
 }
 
 .source .locked a,
@@ -3667,12 +3724,49 @@ span.locked.tag-html-container-close {
     color: #767676
 }
 
-.editarea .locked.order-error,
-.editarea .locked.order-error .locked,
-.source .locked.order-error,
 .opened .targetarea .locked a,
 .opened .source .locked a {
     color: #e000ff !important;
+}
+
+span.deleted .locked,
+span.added .locked {
+    background-color: unset !important;
+}
+
+.editor .editarea .locked.order-error,
+.editor .editarea .locked.order-error,
+.source .locked.order-error {
+    background-color: #fff4e3;
+    color: #ea862c;
+    border: 1px solid #ea862c;
+}
+
+.editor .editarea .locked.mismatch,
+.source .locked.mismatch,
+.locked.mismatch-old,
+.editor .editarea .locked.mismatch,
+.source .locked.mismatch,
+.locked.mismatch-old .locked {
+    background-color: #fdeae2;
+    color: #e1595d;
+    border: 1px solid #e1565a;
+}
+
+.editor .editarea .locked.order-error:hover,
+.editor .editarea .locked.order-error:hover,
+.source .locked.order-error:hover
+{
+    background-color: #fde6c8;
+    transition: 0.3s ease;
+}
+
+.locked.selected,
+.locked .selected,
+.locked.order-error.selected,
+.editarea .locked.mismatch.selected,
+.source .locked.mismatch.selected {
+    background-color: #c6dcfa !important;
 }
 
 .editor .cc-search .input .locked {
@@ -4331,7 +4425,7 @@ section .toolbar .autofillTag {
 .sugg-source span.softReturn, /*to be tested*/
 .track-changes span.softReturn
 {
-    display: inline;
+    display: inline !important;
     margin-left: 6px;
     padding: 1px 2px 3px 40px;
     background-image: url(../img/soft-return1.png);
@@ -4340,6 +4434,8 @@ section .toolbar .autofillTag {
     background-position: center left;
     width: 20px;
     position: relative;
+    direction: ltr;
+    text-align: unset;
 }
 
 .editarea br.soft {
@@ -4407,17 +4503,17 @@ section .toolbar .autofillTag {
 
 }
 
-body.tagModes:not(.tagmode-default-extended) .editarea .locked.startTag,
+body.tagModes:not(.tagmode-default-extended) .targetarea .locked.startTag,
 body.tagModes:not(.tagmode-default-extended) .source .locked.startTag,
 body.tagModes:not(.tagmode-default-extended) .suggestion_source .locked.startTag,
 body.tagModes:not(.tagmode-default-extended) .translation .locked.startTag,
 body.tagModes:not(.tagmode-default-extended) .splitArea .locked.startTag,
-body.tagModes:not(.tagmode-default-extended) .editarea .locked.selfClosingTag,
+body.tagModes:not(.tagmode-default-extended) .targetarea .locked.selfClosingTag,
 body.tagModes:not(.tagmode-default-extended) .source .locked.selfClosingTag,
 body.tagModes:not(.tagmode-default-extended) .suggestion_source .locked.selfClosingTag,
 body.tagModes:not(.tagmode-default-extended) .translation .locked.selfClosingTag,
 body.tagModes:not(.tagmode-default-extended) .splitArea .locked.selfClosingTag,
-body.tagModes:not(.tagmode-default-extended) .editarea .locked.endTag,
+body.tagModes:not(.tagmode-default-extended) .targetarea .locked.endTag,
 body.tagModes:not(.tagmode-default-extended) .source .locked.endTag,
 body.tagModes:not(.tagmode-default-extended) .suggestion_source .locked.endTag,
 body.tagModes:not(.tagmode-default-extended) .translation .locked.endTag,
@@ -4449,7 +4545,7 @@ body.rtl-target.tagModes:not(.tagmode-default-extended) .translation .locked.sta
 body.rtl-source.tagModes:not(.tagmode-default-extended) .source .locked.startTag,
 body.rtl-source.tagModes:not(.tagmode-default-extended) .suggestion_source .locked.startTag,
 body.rtl-target.tagModes:not(.tagmode-default-extended) .splitArea .locked.startTag,
-body.tagModes:not(.tagmode-default-extended) .editarea .locked.endTag,
+body.tagModes:not(.tagmode-default-extended) .targetarea .locked.endTag,
 body.tagModes:not(.tagmode-default-extended) .source .locked.endTag,
 body.tagModes:not(.tagmode-default-extended) .suggestion_source .locked.endTag,
 body.tagModes:not(.tagmode-default-extended) .translation .locked.endTag,
@@ -5020,6 +5116,9 @@ body.cattool .mgmt-table-mt .activemt {
  * Ensure all tabbed content in the footer is only visible when
  * the segment completed loading.
  */
+section .footer .tab.open {
+    display: none;
+}
 
 section .footer .tab.open {
     display: block;

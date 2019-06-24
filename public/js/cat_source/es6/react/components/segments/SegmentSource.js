@@ -57,19 +57,14 @@ class SegmentSource extends React.Component {
     }
 
     beforeRenderActions() {
-        if (!this.props.isReviewImproved) {
-            var area = $("#segment-" + this.props.segment.sid + " .source");
-            this.props.beforeRenderOrUpdate(area);
-        }
+        var area = $("#segment-" + this.props.segment.sid + " .source");
+        this.props.beforeRenderOrUpdate(area);
+
     }
 
     afterRenderActions() {
-        if (!this.props.isReviewImproved) {
-            let area = $("#segment-" + this.props.segment.sid + " .source");
-            this.props.afterRenderOrUpdate(area);
-        }
-        this.addPowerTips()
-
+        var area = $("#segment-" + this.props.segment.sid + " .source");
+        this.props.afterRenderOrUpdate(area);
     }
 
     addPowerTips() {
@@ -91,7 +86,7 @@ class SegmentSource extends React.Component {
     }
 
     onCopyEvent(e) {
-        UI.handleSourceCopyEvent(e);
+        UI.handleCopyEvent(e);
     }
 
     onDragEvent(e) {
@@ -157,6 +152,11 @@ class SegmentSource extends React.Component {
                 .replace( /\)/gi, '\\)' );
 
             var re = new RegExp( '\\b('+ glossaryTerm_escaped.trim() + ')\\b', "gi" );
+
+            //If source languace is Cyrillic
+            if ( cleanString.match(/[\w\u0430-\u044f]+/ig) ) {
+                re = new RegExp( glossaryTerm_escaped.trim(), "gi" );
+            }
 
             cleanString = cleanString.replace( re, '<mark class="inGlossary">$1</mark>' );
 

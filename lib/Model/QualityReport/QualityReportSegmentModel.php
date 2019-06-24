@@ -12,11 +12,13 @@ use CatUtils;
 use Chunks_ChunkStruct;
 use Constants_Revise;
 use Constants_TranslationStatus;
-use Features\ReviewExtended;
-use Features\ReviewImproved;
-use Features\ReviewImproved\Model\QualityReportDao;
+use Features\ReviewExtended\Model\QualityReportDao;
+use Features\ReviewExtended\Model\QualityReportModel;
 use Features\TranslationVersions;
 use FeatureSet;
+use LQA\CategoryDao;
+use LQA\CategoryStruct;
+use SubFiltering\Filter;
 use Translations_TranslationVersionDao;
 use ZipArchiveExtended;
 
@@ -24,8 +26,20 @@ class QualityReportSegmentModel {
 
     public function getSegmentsIdForQR( Chunks_ChunkStruct $chunk, $step = 10, $ref_segment, $where = "after", $options = [] ) {
 
-        $segmentsDao = new \Segments_SegmentDao;
+        if ( isset( $options[ 'filter' ][ 'issue_category' ] ) ) {
+            $subCategories = ( new CategoryDao() )->findByIdModelAndIdParent(
+                    $chunk->getProject()->id_qa_model,
+                    $options['filter']['issue_category']
+            );
 
+            if ( !empty( $subCategories ) > 0 ) {
+                $options[ 'filter' ][ 'issue_category' ] = array_map( function( CategoryStruct $subcat ) {
+                    return $subcat->id ;
+                }, $subCategories );
+            }
+        }
+
+        $segmentsDao = new \Segments_SegmentDao;
         $segments_id = $segmentsDao->getSegmentsIdForQR( $chunk->id, $chunk->password, $step, $ref_segment, $where, $options );
 
         return $segments_id;
@@ -40,8 +54,10 @@ class QualityReportSegmentModel {
         $featureSet->loadForProject( $chunk->getProject() );
 
         $codes = $featureSet->getCodes();
-        if ( in_array( ReviewExtended::FEATURE_CODE, $codes ) OR in_array( ReviewImproved::FEATURE_CODE, $codes ) ) {
+
+        if ( $featureSet->hasRevisionFeature() ) {
             $issues = QualityReportDao::getIssuesBySegments( $segments_id, $chunk->id );
+
         } else {
             $reviseDao          = new \Revise_ReviseDAO();
             $segments_revisions = $reviseDao->readBySegments( $segments_id, $chunk->id );
@@ -65,6 +81,7 @@ class QualityReportSegmentModel {
             $last_translations = $this->makeSegmentsVersionsUniform( $segments_revisions );
         }
 
+        $Filter = Filter::getInstance( $featureSet );
 
         $files = [];
         foreach ( $data as $i => $seg ) {
@@ -83,10 +100,10 @@ class QualityReportSegmentModel {
 
             $seg->parsed_time_to_edit = CatUtils::parse_time_to_edit( $seg->time_to_edit );
 
-            $seg->segment = CatUtils::rawxliff2view( $seg->segment );
+            $seg->segment = $Filter->fromLayer0ToLayer2( $seg->segment );
 
-            $seg->translation = CatUtils::rawxliff2view( $seg->translation );
-            $seg->suggestion = CatUtils::rawxliff2view( $seg->suggestion );
+            $seg->translation = $Filter->fromLayer0ToLayer2( $seg->translation );
+            $seg->suggestion = $Filter->fromLayer0ToLayer2( $seg->suggestion );
 
             foreach ( $issues as $issue ) {
                 if ( $issue->segment_id == $seg->sid ) {
@@ -105,7 +122,7 @@ class QualityReportSegmentModel {
             if(isset($last_translations) && !empty($last_translations)){
                 foreach ( $last_translations as $last_translation ) {
                     if ( $last_translation->id_segment == $seg->sid ) {
-                        $last_translation->translation = CatUtils::rawxliff2view( $last_translation->translation );
+                        $last_translation->translation = $Filter->fromLayer0ToLayer2( $last_translation->translation );
                         $find_last_translation_version = $last_translation;
                         break;
                     }
@@ -117,7 +134,7 @@ class QualityReportSegmentModel {
             if ( isset( $last_revisions ) && !empty($last_revisions) ) {
                 foreach ( $last_revisions as $last_revision ) {
                     if ( $last_revision->id_segment == $seg->sid ) {
-                        $last_revision->translation = CatUtils::rawxliff2view( $last_revision->translation );
+                        $last_revision->translation = $Filter->fromLayer0ToLayer2( $last_revision->translation );
                         $find_last_revision_version = $last_revision;
                         break;
                     }

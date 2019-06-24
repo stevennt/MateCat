@@ -48,17 +48,13 @@ class SegmentTarget extends React.Component {
     }
 
     beforeRenderActions() {
-        if (!this.props.isReviewImproved) {
-            let area = $("#segment-" + this.props.segment.sid + " .targetarea");
-            this.props.beforeRenderOrUpdate(area);
-        }
+        let area = $("#segment-" + this.props.segment.sid + " .targetarea");
+        this.props.beforeRenderOrUpdate(area);
     }
 
     afterRenderActions() {
-        if (!this.props.isReviewImproved) {
-            let area = $("#segment-" + this.props.segment.sid + " .targetarea");
-            this.props.afterRenderOrUpdate(area);
-        }
+        let area = $("#segment-" + this.props.segment.sid + " .targetarea");
+        this.props.afterRenderOrUpdate(area);
     }
 
     onClickEvent(event) {
@@ -76,7 +72,10 @@ class SegmentTarget extends React.Component {
             event.preventDefault();
             event.stopPropagation();
             selection = getSelectionData( selection, container ) ;
-            SegmentActions.openIssuesPanel({ sid: this.props.segment.sid,  selection : selection }, true)
+            SegmentActions.openIssuesPanel({ sid: this.props.segment.sid,  selection : selection }, true);
+            setTimeout(()=> {
+                SegmentActions.showIssuesMessage(this.props.segment.sid, 2);
+            });
         } else {
             this.props.removeSelection();
             UI.editAreaClick(event.currentTarget);
@@ -118,53 +117,13 @@ class SegmentTarget extends React.Component {
         return {__html: string};
     }
 
-    componentDidMount() {
-        SegmentStore.addListener(SegmentConstants.REPLACE_TRANSLATION, this.replaceTranslation);
-        SegmentStore.addListener(SegmentConstants.TRANSLATION_EDITED, this.replaceTranslation);
-        SegmentStore.addListener(SegmentConstants.DISABLE_TAG_LOCK, this.toggleTagLock);
-        SegmentStore.addListener(SegmentConstants.ENABLE_TAG_LOCK, this.toggleTagLock);
-        SegmentStore.addListener(SegmentConstants.SET_SEGMENT_ORIGINAL_TRANSLATION, this.setOriginalTranslation);
-        this.afterRenderActions();
-
-    }
-
-    componentWillUnmount() {
-        SegmentStore.removeListener(SegmentConstants.REPLACE_TRANSLATION, this.replaceTranslation);
-        SegmentStore.removeListener(SegmentConstants.TRANSLATION_EDITED, this.replaceTranslation);
-        SegmentStore.removeListener(SegmentConstants.DISABLE_TAG_LOCK, this.toggleTagLock);
-        SegmentStore.addListener(SegmentConstants.ENABLE_TAG_LOCK, this.toggleTagLock);
-        SegmentStore.removeListener(SegmentConstants.SET_SEGMENT_ORIGINAL_TRANSLATION, this.setOriginalTranslation);
-    }
-
-    componentWillMount() {
-        this.beforeRenderActions();
-    }
-
-    componentWillUpdate() {
-        this.beforeRenderActions();
-    }
-
-    componentDidUpdate() {
-        this.afterRenderActions();
-    }
-
-    render() {
+    getTargetArea(translation) {
         let textAreaContainer = "";
-        let translation = this.state.translation.replace( /(<\/span\>\s)$/gi, "</span><br class=\"end\">" );
-        if (QaCheckBlacklist.enabled() && this.props.segment.opened && this.props.segment.qaBlacklist) {
-            translation = this.markBlacklistMatches(translation);
-        }
-        if (this.props.isReviewImproved) {
-            textAreaContainer = <div data-mount="segment_text_area_container">
-                <div className="textarea-container" onClick={this.onClickEvent.bind( this )}>
-                    <div className="targetarea issuesHighlightArea errorTaggingArea"
-                         dangerouslySetInnerHTML={this.allowHTML( translation )}/>
-                </div>
-            </div>
-        } else if ( this.props.segment.edit_area_locked ) {
+
+        if ( this.props.segment.edit_area_locked ) {
             textAreaContainer = <div className="segment-text-area-container" data-mount="segment_text_area_container">
                 <div className="textarea-container" onClick={this.onClickEvent.bind( this )} onMouseUp={this.selectIssueText.bind(this)}
-                ref={(div)=> this.issuesHighlightArea = div}>
+                     ref={(div)=> this.issuesHighlightArea = div}>
                     <div className="targetarea issuesHighlightArea errorTaggingArea"
                          dangerouslySetInnerHTML={this.allowHTML( translation )}/>
                 </div>
@@ -206,6 +165,7 @@ class SegmentTarget extends React.Component {
             }
 
             //Tag Mode Buttons
+
             if (this.props.tagModesEnabled && !this.props.enableTagProjection && UI.tagLockEnabled) {
                 let buttonClass = ($('body').hasClass("tagmode-default-extended")) ? "active" : "";
                 tagModeButton =
@@ -252,10 +212,49 @@ class SegmentTarget extends React.Component {
                 </div>
             </div>;
         }
+        return textAreaContainer;
+    }
+
+    componentDidMount() {
+        SegmentStore.addListener(SegmentConstants.REPLACE_TRANSLATION, this.replaceTranslation);
+        // SegmentStore.addListener(SegmentConstants.TRANSLATION_EDITED, this.replaceTranslation);
+        SegmentStore.addListener(SegmentConstants.DISABLE_TAG_LOCK, this.toggleTagLock);
+        SegmentStore.addListener(SegmentConstants.ENABLE_TAG_LOCK, this.toggleTagLock);
+        SegmentStore.addListener(SegmentConstants.SET_SEGMENT_ORIGINAL_TRANSLATION, this.setOriginalTranslation);
+        this.afterRenderActions();
+
+    }
+
+    componentWillUnmount() {
+        SegmentStore.removeListener(SegmentConstants.REPLACE_TRANSLATION, this.replaceTranslation);
+        // SegmentStore.removeListener(SegmentConstants.TRANSLATION_EDITED, this.replaceTranslation);
+        SegmentStore.removeListener(SegmentConstants.DISABLE_TAG_LOCK, this.toggleTagLock);
+        SegmentStore.addListener(SegmentConstants.ENABLE_TAG_LOCK, this.toggleTagLock);
+        SegmentStore.removeListener(SegmentConstants.SET_SEGMENT_ORIGINAL_TRANSLATION, this.setOriginalTranslation);
+    }
+
+    componentWillMount() {
+        this.beforeRenderActions();
+    }
+
+    componentWillUpdate() {
+        this.beforeRenderActions();
+    }
+
+    componentDidUpdate() {
+        this.afterRenderActions();
+    }
+
+    render() {
+        let translation = this.state.translation.replace( /(<\/span\>\s)$/gi, "</span><br class=\"end\">" );
+        if (QaCheckBlacklist.enabled() && this.props.segment.opened && this.props.segment.qaBlacklist) {
+            translation = this.markBlacklistMatches(translation);
+        }
+
         return (
             <div className="target item" id={"segment-" + this.props.segment.sid + "-target"}>
 
-                {textAreaContainer}
+                {this.getTargetArea(translation)}
                 <p className="warnings"/>
 
                 <SegmentButtons

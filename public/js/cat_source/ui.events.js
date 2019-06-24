@@ -41,8 +41,17 @@ $.extend(UI, {
             UI.gotoNextSegment();
         }).on('keydown.shortcuts', null, UI.shortcuts.cattol.events.translate_nextUntranslated.keystrokes[this.shortCutskey], function(e) {
             e.preventDefault();
-            $('.editor .next-untranslated:not(.disabled)').click();
-            $('.editor .next-unapproved:not(.disabled)').click();
+            if ( config.isReview ) {
+                $('.editor .next-unapproved:not(.disabled)').click();
+            } else {
+                if ( $('.editor .next-untranslated:not(.disabled)').length > 0 ) {
+                    $('.editor .next-untranslated:not(.disabled)').click();
+                } else if ( $('.editor .translated:not(.disabled)').length > 0 ) {
+                    $('.editor .translated').click();
+                } else if ( $('.editor .guesstags').length > 0 ) {
+                    $('.editor .guesstags').click();
+                }
+            }
         }).on('keydown.shortcuts', null, UI.shortcuts.cattol.events.translate.keystrokes[this.shortCutskey], function(e) {
             e.preventDefault();
             if ( config.isReview ) {
@@ -66,7 +75,12 @@ $.extend(UI, {
         }).on('keydown.shortcuts', null, UI.shortcuts.cattol.events.copyContribution3.keystrokes[this.shortCutskey], function(e) {
             e.preventDefault();
             SegmentActions.chooseContribution(UI.getSegmentId(UI.currentSegment), 3);
-        }).on('keydown.shortcuts', null, "ctrl+u", function(e) {
+        })
+        //     .on('keydown.shortcuts', null, UI.shortcuts.cattol.events.addNextTag.keystrokes[this.shortCutskey], function(e) {
+        //     e.preventDefault();
+        //     UI.autoFillNextTagInTarget()
+        // })
+            .on('keydown.shortcuts', null, "ctrl+u", function(e) {
             // to prevent the underline shortcut
             e.preventDefault();
         }).on('keydown.shortcuts', null, "ctrl+b", function(e) {
@@ -165,7 +179,7 @@ $.extend(UI, {
 
 		$(window).on('mousedown', function(e) {
 			if ($(e.target).hasClass("editarea")) {
-				return;
+				return true;
 			}
             //when the catoool is not loaded because of the job is archived,
             // saveSelection leads to a javascript error
@@ -267,6 +281,7 @@ $.extend(UI, {
                     !UI.body.hasClass('search-open')) {
                         UI.setEditingSegment( null );
                         UI.closeSegment(UI.currentSegment, 1);
+                        UI.closeTagAutocompletePanel();
                     }
             }
 
@@ -326,18 +341,22 @@ $.extend(UI, {
 			UI.formatSelection('capitalize');
 		}).on('mouseup', '.editToolbar li', function() {
 			restoreSelection();
-        }).on('click', '.editor .source .locked,.editor .editarea .locked', function(e) {
+        }).on('click', '.editor .source .locked,.editor .editarea .locked, ' +
+            '.editor .source .locked a,.editor .editarea .locked a', function(e) {
 			e.preventDefault();
 			e.stopPropagation();
-            if($(this).hasClass('selected')) {
-                $(this).removeClass('selected');
-                setCursorPosition(this, 'end');
+			var elem = $(this).hasClass('locked') ? this : this.parentNode;
+            if($(elem).hasClass('selected')) {
+                $(elem).removeClass('selected');
+                setCursorPosition(elem, 'end');
             } else {
-                setCursorPosition(this);
-                selectText(this);
+                setCursorPosition(elem);
+                selectText(elem);
                 UI.removeSelectedClassToTags();
-                $(this).toggleClass('selected');
-				if(!UI.body.hasClass('tagmode-default-extended')) $('.editor .tagModeToggle').click();
+                $(elem).addClass('selected');
+				if(!UI.body.hasClass('tagmode-default-extended')) {
+				    $('.editor .tagModeToggle').click();
+                }
             }
 
 		}).on('click', 'a.translated, a.next-untranslated', function(e) {
@@ -353,6 +372,7 @@ $.extend(UI, {
 			// Tag Projection: handle click on "GuesssTags" button, retrieve the translation and place it
 			// in the current segment
 			e.preventDefault();
+			$(e.target).addClass('disabled');
 			UI.startSegmentTagProjection();
 			return false;
 		}).on('click', '.editor .outersource .copy', function(e) {

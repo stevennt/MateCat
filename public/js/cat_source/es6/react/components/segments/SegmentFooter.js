@@ -2,6 +2,8 @@
  * React Component .
 
  */
+import SegmentFooterMultiMatches from "./SegmentFooterMultiMatches";
+
 let React = require('react');
 let SegmentConstants = require('../../constants/SegmentConstants');
 let SegmentStore = require('../../stores/SegmentStore');
@@ -62,12 +64,21 @@ class SegmentFooter extends React.Component {
                 elements: []
             },
             messages: {
-                label: 'Messages',
-                code: 'notes',
-                tab_class: 'segment-notes',
-                enabled: !!(this.props.segment.notes && this.props.segment.notes.length > 0) || !!this.props.segment.context_groups,
-                visible: !!(this.props.segment.notes && this.props.segment.notes.length > 0) || !!this.props.segment.context_groups,
-                open: !!(this.props.segment.notes && this.props.segment.notes.length > 0),
+                label : 'Messages',
+                code : 'notes',
+                tab_class : 'segment-notes',
+                enabled : !!(this.props.segment.notes && this.props.segment.notes.length > 0) || !!this.props.segment.context_groups,
+                visible : !!(this.props.segment.notes && this.props.segment.notes.length > 0) || !!this.props.segment.context_groups,
+                open : !!(this.props.segment.notes && this.props.segment.notes.length > 0),
+                elements : []
+            },
+            multiMatches: {
+                label: 'Crosslanguage Matches',
+                code : 'cl',
+                tab_class : 'cross-matches',
+                enabled: !!(UI.crossLanguageSettings && UI.crossLanguageSettings.primary),
+                visible: !!(UI.crossLanguageSettings && UI.crossLanguageSettings.primary),
+                open: false,
                 elements: []
             },
             review: {
@@ -85,6 +96,7 @@ class SegmentFooter extends React.Component {
             hideMatches: hideMatches
         };
         this.registerTab = this.registerTab.bind(this);
+        this.modifyTabVisibility = this.modifyTabVisibility.bind(this);
         this.getTabContainer = this.getTabContainer.bind(this);
         this.changeTab = this.changeTab.bind(this);
         this.openTab = this.openTab.bind(this);
@@ -100,7 +112,17 @@ class SegmentFooter extends React.Component {
         }
         return allTabs
     }
+    modifyTabVisibility(tabName, visible) {
+        let tabs = _.cloneDeep(this.state.tabs);
+        tabs[tabName].visible = visible;
+        tabs[tabName].enabled = visible;
+        if ( _.size(this.state.tabs) ) {
+            this.setState({
+                tabs: tabs
+            });
+        }
 
+    }
     getTabContainer(tab, active_class) {
         let open_class = (active_class == 'active') ? 'open' : '';
         switch (tab.code) {
@@ -151,6 +173,15 @@ class SegmentFooter extends React.Component {
                     context_groups={this.props.segment.context_groups}
                     segmentSource = {this.props.segment.segment}/>;
                 break;
+            case 'cl':
+                return <SegmentFooterMultiMatches
+                    key={"container_" + tab.code}
+                    code = {tab.code}
+                    active_class = {open_class}
+                    tab_class = {tab.tab_class}
+                    id_segment = {this.props.sid}
+                    segment = {this.props.segment}/>;
+                break;
             case 'review':
                 return <SegmentTabRevise
                     key={"container_" + tab.code}
@@ -177,12 +208,14 @@ class SegmentFooter extends React.Component {
         });
     }
     setDefaultTabOpen( sid, tabName) {
-        if (this.tabs[tabName]) {
+        let tabs = jQuery.extend(true, {}, this.state.tabs);
+        if (tabs[tabName]) {
             //Close all tabs
-            for ( let item in this.tabs ) {
-                this.tabs[item].open = false
+            for ( let item in tabs ) {
+                tabs[item].open = false
             }
-            this.tabs[tabName].open = true;
+            tabs[tabName].open = true;
+            this.setState({tabs});
         }
     }
     openTab(sid, tabCode) {
@@ -245,6 +278,7 @@ class SegmentFooter extends React.Component {
 
     componentDidMount() {
         SegmentStore.addListener(SegmentConstants.REGISTER_TAB, this.registerTab);
+        SegmentStore.addListener(SegmentConstants.MODIFY_TAB_VISIBILITY, this.modifyTabVisibility);
         SegmentStore.addListener(SegmentConstants.OPEN_TAB, this.openTab);
         SegmentStore.addListener(SegmentConstants.CLOSE_TABS, this.closeAllTabs);
         SegmentStore.addListener(SegmentConstants.SET_DEFAULT_TAB, this.setDefaultTabOpen);
@@ -252,6 +286,7 @@ class SegmentFooter extends React.Component {
 
     componentWillUnmount() {
         SegmentStore.removeListener(SegmentConstants.REGISTER_TAB, this.registerTab);
+        SegmentStore.removeListener(SegmentConstants.MODIFY_TAB_VISIBILITY, this.modifyTabVisibility);
         SegmentStore.removeListener(SegmentConstants.OPEN_TAB, this.openTab);
         SegmentStore.removeListener(SegmentConstants.CLOSE_TABS, this.closeAllTabs);
         SegmentStore.removeListener(SegmentConstants.SET_DEFAULT_TAB, this.setDefaultTabOpen);
@@ -266,6 +301,32 @@ class SegmentFooter extends React.Component {
     }
 
 
+    isTabLoading(tab) {
+        switch(tab.code) {
+            case 'tm':
+                return _.isUndefined(this.props.segment.contributions) ||
+                    (_.isUndefined(this.props.segment.contributions.matches) &&
+                    this.props.segment.contributions.errors.length === 0);
+            case 'cl':
+                return _.isUndefined(this.props.segment.cl_contributions) ||
+                    (_.isUndefined(this.props.segment.cl_contributions.matches) &&
+                    this.props.segment.cl_contributions.errors.length === 0);
+            default:
+                return false;
+        }
+    }
+
+    getTabIndex(tab) {
+        switch(tab.code) {
+            case 'tm':
+                return this.props.segment.contributions.matches && this.props.segment.contributions.matches.length;
+            case 'cl':
+                return this.props.segment.cl_contributions.matches && this.props.segment.cl_contributions.matches.length;
+            default:
+                return tab.index;
+        }
+    }
+
     render() {
         let labels = [];
         let containers = [];
@@ -277,28 +338,38 @@ class SegmentFooter extends React.Component {
                 /**
                  * Todo: this is a object, we can't count it.
                  */
-                if(key === 'glossary' && this.props.segment[key]){
+                if ( key === 'glossary' && this.props.segment[key] ){
                     let count = 0;
                     for(let x in this.props.segment[key]){
                         count ++;
                     }
                     tab.index  = count;
-                }else if(this.props.segment[key] && this.props.segment[key].length > 0){
+                } else if ( this.props.segment[key] && this.props.segment[key].length > 0 ){
                     tab.index  = this.props.segment[key].length;
                 }
                 let hidden_class = (tab.visible) ? '' : 'hide';
                 let active_class = (tab.open && !hideMatches) ? 'active' : '';
+                let isLoading = this.isTabLoading(tab);
+                let tabIndex = (!isLoading) ? this.getTabIndex(tab) : null;
+                let loadingClass = (isLoading) ? "loading-tab" : "";
                 let label = <li
-                    key={tab.code}
-                    ref={(elem) => this[tab.code] = elem}
-                    className={hidden_class + " " + active_class + " tab-switcher tab-switcher-" + tab.code}
+                    key={ tab.code }
+                    ref={(elem)=> this[tab.code] = elem}
+                    className={ hidden_class + " " + active_class + " tab-switcher tab-switcher-" + tab.code + " " + loadingClass}
                     id={"segment-" + this.props.sid + tab.code}
                     data-tab-class={ tab.tab_class }
                     data-code={ tab.code }
                     onClick={ self.tabClick.bind(this, key, false) }>
-                    <a tabIndex="-1" >{ tab.label }
-                        <span className="number">{(tab.index) ? ' (' + tab.index + ')' : ''}</span>
-                    </a>
+                    {!isLoading ? (
+                        <a tabIndex="-1" >{ tab.label }
+                            <span className="number">{(tabIndex) ? ' (' + tabIndex + ')' : ''}</span>
+                        </a>
+                    ) : (
+                        <a tabIndex="-1" >{ tab.label }
+                            <span className="loader loader_on"/>
+                        </a>
+                    ) }
+
                 </li>;
                 labels.push(label);
                 let container = self.getTabContainer(tab, active_class);

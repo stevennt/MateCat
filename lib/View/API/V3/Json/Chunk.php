@@ -15,17 +15,14 @@ use CatUtils;
 use Chunks_ChunkStruct;
 use DataAccess\ShapelessConcreteStruct;
 use Features\ReviewExtended;
-use Features\ReviewImproved;
-use Langs_Languages;
+use Features\ReviewExtended\Model\QualityReportDao;
+use FeatureSet;
 use Langs_LanguageDomains;
-use LQA\ChunkReviewDao;
+use Langs_Languages;
 use ManageUtils;
-use Routes;
-use TmKeyManagement_ClientTmKeyStruct;
-use Users_UserStruct;
+use RevisionFactory;
 use Utils;
 use WordCount_Struct;
-use FeatureSet;
 
 class Chunk extends \API\V2\Json\Chunk {
 
@@ -34,27 +31,29 @@ class Chunk extends \API\V2\Json\Chunk {
      *
      * @return array
      * @throws \Exception
-     * @throws \Exceptions\NotFoundError
+     * @throws \Exceptions\NotFoundException
      */
     public function renderOne( \Chunks_ChunkStruct $chunk ) {
+        $project = $chunk->getProject();
+        $featureSet = $project->getFeatures();
         return [
                 'job' => [
                         'id'     => (int)$chunk->id,
-                        'chunks' => [ $this->renderItem( $chunk ) ]
+                        'chunks' => [ $this->renderItem( $chunk, $project, $featureSet ) ]
                 ]
         ];
     }
 
     /**
-     * @param $jStruct Chunks_ChunkStruct
+     * @param                         $jStruct Chunks_ChunkStruct
+     *
+     * @param \Projects_ProjectStruct $project
+     * @param FeatureSet              $featureSet
      *
      * @return array
      * @throws \Exception
-     * @throws \Exceptions\NotFoundError
      */
-    public function renderItem( Chunks_ChunkStruct $jStruct ) {
-
-        $featureSet = new FeatureSet();
+    public function renderItem( Chunks_ChunkStruct $jStruct, \Projects_ProjectStruct $project, FeatureSet $featureSet ) {
 
         $outsourceInfo = $jStruct->getOutsource();
         $tStruct       = $jStruct->getTranslator();
@@ -83,13 +82,11 @@ class Chunk extends \API\V2\Json\Chunk {
 
         $warningsCount = $jStruct->getWarningsCount();
 
-        $featureSet->loadForProject( $jStruct->getJob()->getProject() );
+        $chunkReview = CatUtils::getQualityInfoFromJobStruct( $jStruct, $project, $featureSet );
 
-        $chunkReview = CatUtils::getQualityInfoFromJobStruct( $jStruct );
-
-        if ( in_array( ReviewImproved::FEATURE_CODE, $featureSet->getCodes() ) || in_array( ReviewExtended::FEATURE_CODE, $featureSet->getCodes() ) ) {
+        if ( $featureSet->hasRevisionFeature() ) {
             $reviseIssues     = [];
-            $qualityReportDao = new ReviewImproved\Model\QualityReportDao();
+            $qualityReportDao = new QualityReportDao();
             $qa_data          = $qualityReportDao->getReviseIssuesByChunk( $jStruct->id, $jStruct->password );
             foreach ( $qa_data as $issue ) {
                 if ( !isset( $reviseIssues[ $issue->id_category ] ) ) {
@@ -116,13 +113,13 @@ class Chunk extends \API\V2\Json\Chunk {
                 $quality_overall = 'fail';
             }
 
-            $chunkReviewModel = new ReviewImproved\ChunkReviewModel($chunkReview);
+            $chunkReviewModel = RevisionFactory::getInstance()->getChunkReviewModel( $chunkReview ) ;
+
             $score = number_format( $chunkReviewModel->getScore(), 2, ".", "");
 
             $total_issues_weight = $chunkReviewModel->getPenaltyPoints();
             $total_reviews_words_count = $chunkReviewModel->getReviewedWordsCount();
 
-            $project = $jStruct->getProject();
             $model = $project->getLqaModel() ;
             $categories = $model->getSerializedCategories();
 
@@ -211,9 +208,6 @@ class Chunk extends \API\V2\Json\Chunk {
 
         ];
 
-
-        $project = $jStruct->getProject();
-
         /**
          * @var $projectData ShapelessConcreteStruct[]
          */
@@ -222,7 +216,7 @@ class Chunk extends \API\V2\Json\Chunk {
         $formatted = new ProjectUrls( $projectData );
 
         /** @var $formatted ProjectUrls */
-        $formatted = $project->getFeatures()->filter( 'projectUrls', $formatted );
+        $formatted = $featureSet->filter( 'projectUrls', $formatted );
 
         $urlsObject       = $formatted->render( true );
         $result[ 'urls' ] = $urlsObject[ 'jobs' ][ $jStruct->id ][ 'chunks' ][ $jStruct->password ];

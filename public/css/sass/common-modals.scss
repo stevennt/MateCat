@@ -1434,6 +1434,9 @@ a.login-button.btn-confirm-medium.sing-in.disabled:hover {
                             &.s:after {
                                 content: "S";
                             }
+                            &.t:after {
+                                content: "T";
+                            }
                             &.up:after {
                                 content: "Arrow up";
                             }
@@ -1507,6 +1510,17 @@ a.login-button.btn-confirm-medium.sing-in.disabled:hover {
         label {
             position: relative;
             top: 1px;
+            padding-right: 2px;
+        }
+    }
+}
+.matecat-modal-content {
+    .boxed {
+        padding: 25px 15px 0;
+        text-align: left;
+        label {
+            position: relative;
+            top: -2px;
             padding-right: 2px;
         }
     }
