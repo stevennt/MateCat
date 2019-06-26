@@ -107,8 +107,9 @@ UI = {
      * @param el
      * @param status
      * @param byStatus
+     * @param fromStatusMenu
      */
-	changeStatus: function(el, status, byStatus) {
+	changeStatus: function(el, status, byStatus, fromStatusMenu) {
         var segment = $(el).closest("section");
         var segment_id = this.getSegmentId(segment);
 
@@ -118,6 +119,10 @@ UI = {
             byStatus        : byStatus,
             noPropagation   : ! UI.shouldSegmentAutoPropagate( segment, status )
         };
+
+        if ( fromStatusMenu ) {
+            opts.revision_number = (status === 'approved') ? 1 : null;
+        }
 
         if ( byStatus || opts.noPropagation ) {
             opts.noPropagation = true;
@@ -178,6 +183,7 @@ UI = {
         var noPropagation = options.noPropagation;
         var status        = options.status;
         var byStatus      = options.byStatus;
+        var revisionNumber = (options.revision_number) ? options.revision_number : config.revisionNumber;
 
         noPropagation = noPropagation || false;
 
@@ -189,7 +195,8 @@ UI = {
             status: status,
             caller: false,
             byStatus: byStatus,
-            propagate: !noPropagation
+            propagate: !noPropagation,
+            revision_number: revisionNumber
         });
         SegmentActions.removeClassToSegment(options.segment_id, 'saved');
         UI.setSegmentModified( UI.currentSegment, false ) ;
@@ -1832,6 +1839,7 @@ UI = {
         var callback = options.callback || false;
         var byStatus = options.byStatus || false;
         var propagate = options.propagate || false;
+        var revisionNumber = options.revision_number || false;
 
         var segment = UI.Segment.findAbsolute( id_segment );
 
@@ -1847,7 +1855,8 @@ UI = {
             caller: caller,
             callback: callback,
             byStatus: byStatus,
-            propagate: propagate
+            propagate: propagate,
+            revision_number: revisionNumber
         };
         //Check if the traslation is not already in the tail
         var saveTranslation = this.translationIsToSave( segment );
@@ -1973,7 +1982,8 @@ UI = {
             id_before: idBefore,
             context_after: contextAfter,
             id_after: idAfter,
-            by_status: byStatus
+            by_status: byStatus,
+            revision_number: options.revision_number
         };
         if(isSplitted) {
             this.setStatus($('#segment-' + id_segment), status);
