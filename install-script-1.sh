@@ -65,11 +65,16 @@ exit
 mv /home/matecat/cattool/INSTALL/matecat-vhost.conf /etc/apache2/sites-available
 a2ensite matecat-vhost.conf
 apache2ctl restart
+
+son: cd /home/matecat/cattool
 php -r "readfile('https://getcomposer.org/installer');" | php
     or: 
         download the file with firefox: https://getcomposer.org/installer
         php installer        
+apt install php-xml
+apt install php-mbstring
 php composer.phar --no-dev install
+    Package phpoffice/phpexcel is abandoned, you should avoid using it. Use phpoffice/phpspreadsheet instead.
 su - matecat
 cd ~/cattool/inc
 cp config.ini.sample config.ini
