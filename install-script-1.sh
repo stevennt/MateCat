@@ -1,22 +1,28 @@
 
 apt-get install apache2
-a2enmod rewrite filter deflate headers expires mod_version proxy_http.load
+a2enmod rewrite filter deflate headers expires proxy_http.load
 apache2ctl restart
+wget http://repo.mysql.com/mysql-apt-config_0.8.14-1_all.deb
+apt install ./mysql-apt-config_0.8.14-1_all.deb 
+apt update
 apt-get install mysql-server mysql-client
+password: ts
 mysql -u root -p
 mysql>
-apt-get install php5 php5-mysql libapache2-mod-php5 php5-curl php5-json
+exit
+apt-get install php php-mysql libapache2-mod-php php-curl php-json
 apt-get install screen
-apt-get install openjdk-7-jre
+apt-get install openjdk-11-jre
 cd
-wget http://apache.mirrors.lucidnetworks.net/activemq/5.11.3/apache-activemq-5.11.3-bin.tar.gz
-tar xzf apache-activemq-5.11.3-bin.tar.gz
-mv apache-activemq-5.11.3 /opt
-ln -sf /opt/apache-activemq-5.11.3/ /opt/activemq
+wget http://mirror.downloadvn.com/apache//activemq/5.15.11/apache-activemq-5.15.11-bin.tar.gz
+tar xzf apache-activemq-5.15.11-bin.tar.gz
+mv apache-activemq-5.15.11 /opt
+ln -sf /opt/apache-activemq-5.15.11/ /opt/activemq
 adduser -system activemq
 sed -i 's#activemq:/bin/false#activemq:/bin/bash#g' /etc/passwd
-chown -R activemq: /opt/apache-activemq-5.11.3/
+chown -R activemq: /opt/apache-activemq-5.15.11/
 ln -sf /opt/activemq/bin/activemq /etc/init.d/
+son added: printf '%s\n' '#!/bin/bash' 'exit 0' | sudo tee -a /etc/rc.local
 sed -i 's#exit 0##g' /etc/rc.local
 sh -c 'echo "/bin/sh /usr/bin/activemq start" >> /etc/rc.local'
 /etc/init.d/activemq create /etc/default/activemq
@@ -25,17 +31,19 @@ chmod 600 /etc/default/activemq
 sed -i 's/Context createConnector='false'/Context createConnector='true'/g' /etc/default/activemq/conf/activemq.xml
 ln -s /etc/init.d/activemq /usr/bin/activemq
 activemq start
-rm apache-activemq-5.11.3-bin.tar.gz
+rm apache-activemq-5.15.11-bin.tar.gz
 apt-get install redis-server
 sed -i 's/bind 127.0.0.1/bind 0.0.0.0/g' /etc/redis/redis.conf
 service redis-server restart
-curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
+curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
 apt-get install -y nodejs
 npm install grunt
+        npm WARN saveError ENOENT: no such file or directory, open '/root/Workspace/package.json'
+        npm WARN enoent ENOENT: no such file or directory, open '/root/Workspace/package.json'
 npm install -g grunt-cli
 echo "screen -d -m -S 'node' node \/home\/matecat\/cattool\/nodejs\/server.js" >> /etc/rc.local
-echo "short_open_tag = On" >> /etc/php5/cli/php.ini
-echo "memory_limit = 1024M" >> /etc/php5/cli/php.ini
+echo "short_open_tag = On" >> /etc/php/7.3/cli/php.ini
+echo "memory_limit = 1024M" >> /etc/php/7.3/cli/php.ini
 apache2ctl restart
 adduser --disabled-password --gecos "" matecat
 apt-get install git
@@ -43,6 +51,7 @@ su - matecat
 git clone https://github.com/matecat/MateCat.git cattool
 cd ~/cattool/lib/Model
 mysql -u root -p < matecat.sql
+    enter pw ts
 mysql -u root -p
 delete from mysql.user where user = 'matecat' and host = '%';
 grant all privileges on matecat.* to 'matecat'@'localhost' identified by 'matecat01';
@@ -51,11 +60,15 @@ exit
 cd ~/cattool/INSTALL
 cp matecat-vhost.conf.sample matecat-vhost.conf
 sed -i "s/@@@path@@@/\/home\/matecat\/cattool/g" matecat-vhost.conf
+Install the virtualhost:
 exit
 mv /home/matecat/cattool/INSTALL/matecat-vhost.conf /etc/apache2/sites-available
 a2ensite matecat-vhost.conf
 apache2ctl restart
 php -r "readfile('https://getcomposer.org/installer');" | php
+    or: 
+        download the file with firefox: https://getcomposer.org/installer
+        php installer        
 php composer.phar --no-dev install
 su - matecat
 cd ~/cattool/inc
@@ -141,4 +154,3 @@ In this case you can ignore the FILTERS_MASHAPE_KEY parameter, it has no effect 
 
 
 That’s all. Now type http://localhost in Chrome or Safari and enjoy your fresh install.
-
