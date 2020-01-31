@@ -82,6 +82,18 @@ cp task_manager_config.ini.sample task_manager_config.ini
 sed -i "s/\/home\/matecat\/storage/\/home\/matecat\/cattool\/storage/g" config.ini
 cd ~/cattool/support_scripts/grunt
 npm install
+son: run it again: 
+npm install
+    npm WARN babel-loader@6.4.1 requires a peer of webpack@1 || 2 || ^2.1.0-beta || ^2.2.0-rc but none is installed. You must install peer dependencies yourself.
+    npm WARN react-addons-css-transition-group@15.6.2 requires a peer of react@^15.4.2 but none is installed. You must install peer dependencies yourself.
+    npm WARN optional SKIPPING OPTIONAL DEPENDENCY: fsevents@1.2.11 (node_modules/fsevents):
+    npm WARN notsup SKIPPING OPTIONAL DEPENDENCY: Unsupported platform for fsevents@1.2.11: wanted {"os":"darwin","arch":"any"} (current: {"os":"linux","arch":"x64"})
+pwd 
+~/cattool/support_scripts/grunt
+Currently I'm in matecat user. Open a root window: npm install webpack -g
+npm install webpack@2
+npm install react@15
+
 grunt deploy
 cd ~/cattool/nodejs
 cp config.ini.sample config.ini
