@@ -1,4 +1,3 @@
-
 apt-get install apache2
 a2enmod rewrite filter deflate headers expires proxy_http.load
 apache2ctl restart
@@ -49,6 +48,8 @@ adduser --disabled-password --gecos "" matecat
 apt-get install git
 su - matecat
 git clone https://github.com/matecat/MateCat.git cattool
+cd cattool
+git checkout master [to prevent the develop branch, it has so many branches]
 cd ~/cattool/lib/Model
 mysql -u root -p < matecat.sql
     enter pw ts
@@ -69,7 +70,7 @@ apache2ctl restart
 son: cd /home/matecat/cattool
 php -r "readfile('https://getcomposer.org/installer');" | php
     or: 
-        download the file with firefox: https://getcomposer.org/installer
+        download the file with firefox: wget https://getcomposer.org/installer
         php installer        
 apt install php-xml
 apt install php-mbstring
@@ -78,6 +79,7 @@ php composer.phar --no-dev install
 su - matecat
 cd ~/cattool/inc
 cp config.ini.sample config.ini
+    vi config.ini [and change the variables, especially the DB ]
 cp task_manager_config.ini.sample task_manager_config.ini
 sed -i "s/\/home\/matecat\/storage/\/home\/matecat\/cattool\/storage/g" config.ini
 cd ~/cattool/support_scripts/grunt
@@ -93,6 +95,11 @@ pwd
 Currently I'm in matecat user. Open a root window: npm install webpack -g
 npm install webpack@2
 npm install react@15
+
+npm install webpack
+npm install react
+npm install babel-loader
+npm install react-addons-css-transition-group
 
 grunt deploy
 cd ~/cattool/nodejs
